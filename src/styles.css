@@ -1,32 +1,277 @@
-/* Minimal styles to make the slice #2 grid readable in `tauri dev`.
- * The full dark-theme + Tailwind v4 port from weekly_scheduler.html
- * lands in slice #3 once the time module brings real date math. */
+/* Visual polish on top of the slices #2–#5 structure. The TDD work
+ * landed clickable cells, Session blocks, the editor modal, and the
+ * per-Session quick-action buttons — this stylesheet makes them
+ * visible. Layout is hand-rolled rather than Tailwind so the v0.1
+ * dev install stays lean; the Tailwind port lives in a later slice. */
+
 :root {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #0d0d0f;
   color: #e0e0e0;
   margin: 0;
+
+  /* Surface tokens */
+  --bg: #0d0d0f;
+  --surface: #14141a;
+  --surface-2: #1c1c24;
+  --border: #2a2a2e;
+  --text: #e0e0e0;
+  --text-dim: #9097a3;
+  --accent: #3b82f6;
+  --danger: #ef4444;
+  --warn: #f59e0b;
+
+  /* Category palette */
+  --cat-animation: #3b82f6;
+  --cat-workflow: #a855f7;
+  --cat-cornerman: #14b8a6;
+  --cat-break: #6b7280;
 }
 
 body {
   margin: 0;
   padding: 1rem;
+  font-size: 14px;
 }
+
+* {
+  box-sizing: border-box;
+}
+
+/* --- Week grid table --- */
 
 table {
   border-collapse: collapse;
   width: 100%;
+  table-layout: fixed;
 }
 
-th {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #2a2a2e;
+thead th {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
   text-align: left;
-  font-weight: 500;
-  background: #14141a;
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--text);
 }
 
 tbody th {
   width: 5rem;
+  padding: 0.4rem 0.5rem;
+  text-align: right;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
+  vertical-align: top;
+}
+
+tbody td {
+  border: 1px solid var(--border);
+  padding: 2px;
+  height: 48px;
+  vertical-align: top;
+  cursor: pointer;
+  transition: background 0.08s ease;
+}
+
+tbody td:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* --- Session blocks (inside cells) --- */
+
+[data-testid="session-block"] {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #fff;
+  background: var(--cat-break);
+  margin-bottom: 2px;
+  overflow: hidden;
+}
+
+[data-testid="session-block"][data-category="animation"] {
+  background: var(--cat-animation);
+}
+[data-testid="session-block"][data-category="workflow"] {
+  background: var(--cat-workflow);
+}
+[data-testid="session-block"][data-category="cornerman"] {
+  background: var(--cat-cornerman);
+}
+[data-testid="session-block"][data-category="break"] {
+  background: var(--cat-break);
+}
+
+[data-testid="session-block"] span {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+[data-testid="session-block"] input[type="checkbox"] {
+  cursor: pointer;
+  margin: 0;
+  accent-color: #fff;
+}
+
+[data-testid="session-block"] button {
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.85em;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+[data-testid="session-block"] button:hover {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+[data-testid="session-block"][data-done="true"] span {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+/* --- Editor modal --- */
+
+[role="dialog"] {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 10px 60px rgba(0, 0, 0, 0.7);
+  z-index: 100;
+  min-width: 380px;
+  max-width: 480px;
+}
+
+/* Backdrop via a pseudo-element on the dialog so we don't need an
+ * extra DOM node (and tests don't have to know about it). */
+[role="dialog"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: -1;
+}
+
+[role="dialog"] h2 {
+  margin: 0 0 0.85rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+[role="dialog"] form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+[role="dialog"] label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+[role="dialog"] input[type="text"],
+[role="dialog"] input[type="time"],
+[role="dialog"] select,
+[role="dialog"] textarea {
+  padding: 0.45rem 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  font: inherit;
+  text-transform: none;
+}
+
+[role="dialog"] textarea {
+  min-height: 60px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+[role="dialog"] input:focus,
+[role="dialog"] select:focus,
+[role="dialog"] textarea:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+
+[role="dialog"] [data-testid="overlap-warning"] {
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--warn);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+[role="dialog"] [data-testid="overnight-hint"] {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+[role="dialog"] [role="alert"]:not([data-testid]) {
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+/* Button row (last <div> in the form) */
+[role="dialog"] form > div:last-child {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+[role="dialog"] button {
+  padding: 0.45rem 1rem;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+}
+
+[role="dialog"] button:hover {
+  background: var(--border);
+}
+
+[role="dialog"] button[type="submit"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 500;
+}
+
+[role="dialog"] button[type="submit"]:hover {
+  background: #2563eb;
 }
