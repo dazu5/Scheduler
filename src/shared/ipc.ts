@@ -105,3 +105,20 @@ export function duplicateSession(source: Session): Promise<string> {
     notes: source.notes,
   });
 }
+
+/** Pop the most recent Session mutation off the undo deque and
+ *  apply its inverse. Returns the human-readable label of the
+ *  reverted action ("add Session", "edit Session", "delete Session",
+ *  "toggle Session done") so the caller can render a
+ *  "Undid: <label>" toast — or null if there was nothing to undo. */
+export function undoCommand(): Promise<string | null> {
+  return invoke<string | null>('undo');
+}
+
+/** Pop the most recent undone mutation off the redo deque and
+ *  re-apply it. Returns the same label shape as `undoCommand()`
+ *  for the "Redid: <label>" toast, or null if there was nothing
+ *  to redo. */
+export function redoCommand(): Promise<string | null> {
+  return invoke<string | null>('redo');
+}

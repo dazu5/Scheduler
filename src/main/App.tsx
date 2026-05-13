@@ -8,7 +8,9 @@ import {
   deleteSession,
   duplicateSession,
   listSessions,
+  redoCommand,
   toggleDone,
+  undoCommand,
   updateSession,
 } from '../shared/ipc';
 import { addDays, dateKey, getMondayOf } from '../shared/time';
@@ -16,6 +18,7 @@ import { Header } from './Header';
 import { NowPanel } from './NowPanel';
 import { SessionEditor } from './SessionEditor';
 import { WeekGrid } from './WeekGrid';
+import { useKeyboardShortcut } from './hooks/useKeyboardShortcut';
 import { ToastProvider, useToast } from './ui';
 
 // Root component for the main window. Composes the major surfaces
@@ -122,6 +125,44 @@ function AppInner() {
   const handleToday = useCallback(() => {
     setWeekStart(getMondayOf(new Date()));
   }, []);
+
+  // -----------------------------------------------------------------
+  // Slice 5 — Undo / Redo
+  //
+  // The Rust undo_stack module pushes one entry per session_store
+  // mutation; here we expose Ctrl+Z (undo), Ctrl+Shift+Z (redo), and
+  // Ctrl+Y (alternate redo). useKeyboardShortcut already suppresses
+  // these while any input/textarea/select is focused or the editor
+  // modal is open, so typing 'z' inside the Notes field can't undo
+  // your last save.
+  // -----------------------------------------------------------------
+  const handleUndo = useCallback(async () => {
+    try {
+      const label = await undoCommand();
+      if (label) {
+        toast.success(`Undid: ${label}`);
+        await refresh();
+      }
+    } catch (err) {
+      toast.error(`Couldn't undo: ${(err as Error).message ?? 'unknown error'}`);
+    }
+  }, [refresh, toast]);
+
+  const handleRedo = useCallback(async () => {
+    try {
+      const label = await redoCommand();
+      if (label) {
+        toast.success(`Redid: ${label}`);
+        await refresh();
+      }
+    } catch (err) {
+      toast.error(`Couldn't redo: ${(err as Error).message ?? 'unknown error'}`);
+    }
+  }, [refresh, toast]);
+
+  useKeyboardShortcut('z', handleUndo, { ctrl: true });
+  useKeyboardShortcut('z', handleRedo, { ctrl: true, shift: true });
+  useKeyboardShortcut('y', handleRedo, { ctrl: true });
 
   return (
     <div className="flex h-full min-h-screen flex-col bg-bg text-fg">

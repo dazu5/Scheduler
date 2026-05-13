@@ -7,3 +7,4 @@
 
 pub mod db;
 pub mod session_store;
+pub mod undo_stack;
