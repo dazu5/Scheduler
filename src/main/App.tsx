@@ -13,6 +13,7 @@ import {
 } from '../shared/ipc';
 import { addDays, dateKey, getMondayOf } from '../shared/time';
 import { Header } from './Header';
+import { NowPanel } from './NowPanel';
 import { SessionEditor } from './SessionEditor';
 import { WeekGrid } from './WeekGrid';
 
@@ -90,7 +91,8 @@ export function App() {
         onNextWeek={handleNextWeek}
         onToday={handleToday}
       />
-      <main className="flex-1 px-4 py-4">
+      <main className="flex flex-1 flex-col gap-4 px-4 py-4">
+        <NowPanel sessions={sessions} />
         <WeekGrid
           weekStart={weekStart}
           sessions={sessions}

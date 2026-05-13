@@ -17,6 +17,7 @@ vi.mock('../shared/ipc', () => ({
 }));
 
 import {
+  type Session,
   addSession,
   deleteSession,
   duplicateSession,
@@ -26,7 +27,7 @@ import {
 } from '../shared/ipc';
 import { App } from './App';
 
-const oneSession = (overrides: Record<string, unknown> = {}) => ({
+const oneSession = (overrides: Partial<Session> = {}): Session => ({
   id: 'session-1',
   dateKey: '2026-05-13',
   category: 'animation',

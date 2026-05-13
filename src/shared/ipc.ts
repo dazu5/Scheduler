@@ -7,10 +7,15 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { AuditEntry } from './adjustments';
 
+/** Fixed Category palette for v0.1. Kept as a string union (not an
+ *  enum) so wire-format JSON round-trips without translation, and so
+ *  the Rust side stays free to accept the same values. */
+export type Category = 'animation' | 'workflow' | 'cornerman' | 'break';
+
 /** Wire-format inputs for `add_session`. */
 export interface SessionInput {
   dateKey: string;
-  category: string;
+  category: Category;
   label: string;
   startMin: number;
   endMin: number;
@@ -21,7 +26,7 @@ export interface SessionInput {
 export interface Session {
   id: string;
   dateKey: string;
-  category: string;
+  category: Category;
   label: string;
   startMin: number;
   endMin: number;
@@ -47,7 +52,7 @@ export interface OvernightSpill {
  *  to the `adjustments` table within the same transaction as the
  *  Session UPDATE. */
 export interface UpdateSessionInput {
-  category: string;
+  category: Category;
   label: string;
   startMin: number;
   endMin: number;
