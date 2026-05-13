@@ -1,17 +1,36 @@
 // Behaviour tests for <WeekGrid />. The grid is the user's primary
-// surface for placing Sessions onto Days. Slice #2 (issue #2) is
-// scoped to "empty grid renders" — so this file asserts column
-// structure only. Real date labels, Session blocks, click handlers,
-// drag-create, and overlap warnings all live in later slices.
+// surface for placing Sessions onto Days. Slice #2 landed the
+// columnheader + rowheader structure; slice #3 chunk C added the
+// 7×12 body cells the user clicks to start a New Session; chunk D
+// adds the Session-block rendering inside cells.
 //
-// The tests query by ARIA role rather than CSS class so that the
-// underlying markup can be a <table>, a CSS grid of divs with
-// role attributes, or anything else — the user-visible behaviour
-// (a 7-column grid with weekday headers) is what matters.
+// Tests query by ARIA role (columnheader / rowheader / cell) so the
+// underlying markup stays free to evolve. Aria-labels on cells use
+// the format `{dateKey} {hour AM/PM}` — a stable, query-friendly
+// handle for both screen readers and testing-library.
 
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import type { Session } from '../shared/ipc';
 import { WeekGrid } from './WeekGrid';
+
+function mkSession(overrides: Partial<Session> = {}): Session {
+  return {
+    id: 'test-id',
+    dateKey: '2025-01-13',
+    category: 'animation',
+    label: 'sample',
+    startMin: 540,
+    endMin: 600,
+    notes: null,
+    done: false,
+    adjusted: false,
+    overnightLinkId: null,
+    createdAt: 0,
+    updatedAt: 0,
+    ...overrides,
+  };
+}
 
 describe('<WeekGrid />', () => {
   it('renders 7 column headers, Monday through Sunday in that order', () => {
@@ -29,14 +48,56 @@ describe('<WeekGrid />', () => {
   });
 
   it('renders 12 hour-label rows covering the 8 AM–8 PM working window', () => {
-    // 12 rows because the grid window is [8:00, 20:00) — each row
-    // represents one hour starting at its label, so labels run from
-    // 8 AM through 7 PM. Matches gridStartH=8 / gridEndH=20 in the
-    // weekly_scheduler.html predecessor.
     render(<WeekGrid />);
     const rows = screen.getAllByRole('rowheader');
     expect(rows).toHaveLength(12);
     expect(rows[0].textContent?.trim()).toBe('8 AM');
     expect(rows[11].textContent?.trim()).toBe('7 PM');
+  });
+
+  it('renders 84 body cells (7 days × 12 hours)', () => {
+    render(<WeekGrid weekStart={new Date(2025, 0, 13)} />);
+    expect(screen.getAllByRole('cell')).toHaveLength(84);
+  });
+
+  it('labels each cell with its dateKey + hour for queries', () => {
+    render(<WeekGrid weekStart={new Date(2025, 0, 13)} />);
+    expect(screen.getByLabelText('2025-01-13 8 AM')).toBeInTheDocument();
+    expect(screen.getByLabelText('2025-01-15 1 PM')).toBeInTheDocument();
+    expect(screen.getByLabelText('2025-01-19 7 PM')).toBeInTheDocument();
+  });
+
+  it('calls onCellClick with (dateKey, hour) when a cell is clicked', () => {
+    const handler = vi.fn();
+    render(<WeekGrid weekStart={new Date(2025, 0, 13)} onCellClick={handler} />);
+
+    fireEvent.click(screen.getByLabelText('2025-01-15 10 AM'));
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith('2025-01-15', 10);
+  });
+
+  it('renders a Session block inside the cell matching its (dateKey, start hour)', () => {
+    const sessions = [
+      mkSession({ dateKey: '2025-01-13', startMin: 540, label: 'Morning warm-up' }),
+    ];
+    render(<WeekGrid weekStart={new Date(2025, 0, 13)} sessions={sessions} />);
+
+    const cell = screen.getByLabelText('2025-01-13 9 AM');
+    expect(cell).toHaveTextContent('Morning warm-up');
+
+    // No block elsewhere
+    expect(screen.getByLabelText('2025-01-13 8 AM')).not.toHaveTextContent('Morning warm-up');
+  });
+
+  it('places each Session block in the cell of its start hour, by Math.floor(startMin / 60)', () => {
+    const sessions = [
+      mkSession({ id: 'a', dateKey: '2025-01-13', startMin: 555, label: 'Quarter-past 9' }),
+      mkSession({ id: 'b', dateKey: '2025-01-14', startMin: 720, label: 'Noon-thirty' }),
+    ];
+    render(<WeekGrid weekStart={new Date(2025, 0, 13)} sessions={sessions} />);
+
+    expect(screen.getByLabelText('2025-01-13 9 AM')).toHaveTextContent('Quarter-past 9');
+    expect(screen.getByLabelText('2025-01-14 12 PM')).toHaveTextContent('Noon-thirty');
   });
 });

@@ -2539,8 +2539,10 @@ name = "scheduler"
 version = "0.0.1"
 dependencies = [
  "rusqlite",
+ "serde",
  "tauri",
  "tauri-build",
+ "uuid",
 ]
 
 [[package]]
