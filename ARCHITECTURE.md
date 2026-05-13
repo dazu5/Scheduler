@@ -18,7 +18,7 @@
 | E2E tests | **Playwright** | Drives the actual Tauri window. |
 | CI | **GitHub Actions** | Typecheck, lint, test, build Windows installer on every PR. |
 | Updates | **Tauri updater** + GitHub Releases | Signed `.msi` auto-update. |
-| Package manager | **pnpm** | Faster install, strict node_modules. |
+| Package manager | **npm** | Switched from pnpm during slice #2 — pnpm 11's `verify-deps-before-run` strict mode rejected the Tauri build chain; npm just works. |
 
 ## Process model
 
@@ -295,12 +295,12 @@ Scheduler/
 ├── PROGRESS.md
 ├── .gitignore
 ├── package.json
-├── pnpm-lock.yaml
+├── package-lock.json
 ├── tsconfig.json
 ├── biome.json
 ├── vite.config.ts
 ├── playwright.config.ts
-├── tailwind.config.ts
+├── (no tailwind.config — v4 reads tokens from `@theme` in src/styles.css)
 ├── index.html               ← main window entry
 ├── pill.html                ← pill window entry
 ├── src/
