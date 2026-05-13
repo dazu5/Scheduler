@@ -195,4 +195,45 @@ describe('<App />', () => {
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  it('fires a "Saved:" success toast after a successful create', async () => {
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getAllByRole('cell')[0]);
+    fireEvent.change(screen.getByLabelText(/label/i), {
+      target: { value: 'Toasted session' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    const toast = await screen.findByRole('status');
+    expect(toast).toHaveTextContent('Saved: Toasted session');
+  });
+
+  it('fires a "Deleted:" success toast after a successful delete', async () => {
+    vi.mocked(listSessions).mockResolvedValue([oneSession({ label: 'bye' })]);
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByLabelText('Delete bye'));
+
+    const toast = await screen.findByRole('status');
+    expect(toast).toHaveTextContent('Deleted: bye');
+  });
+
+  it('fires an error toast when a mutation fails', async () => {
+    vi.mocked(addSession).mockRejectedValueOnce(new Error('disk full'));
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getAllByRole('cell')[0]);
+    fireEvent.change(screen.getByLabelText(/label/i), {
+      target: { value: 'will fail' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    const toast = await screen.findByRole('status');
+    expect(toast).toHaveTextContent(/couldn['’]t save/i);
+    expect(toast).toHaveAttribute('data-variant', 'error');
+  });
 });

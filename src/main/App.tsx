@@ -16,10 +16,22 @@ import { Header } from './Header';
 import { NowPanel } from './NowPanel';
 import { SessionEditor } from './SessionEditor';
 import { WeekGrid } from './WeekGrid';
+import { ToastProvider, useToast } from './ui';
 
-// Root component for the main window. Issue #18 chunk 4 introduces
-// weekStart as state (was useMemo'd from new Date()) so the Header's
-// prev/next/today navigation can shift it.
+// Root component for the main window. Composes the major surfaces
+// (Header, NowPanel, WeekGrid, SessionEditor) on top of a
+// ToastProvider so every mutation reaches the notification stack.
+//
+// App itself just owns the provider; the actual wiring lives in
+// <AppInner /> so useToast() resolves to the same provider instance.
+
+export function App() {
+  return (
+    <ToastProvider>
+      <AppInner />
+    </ToastProvider>
+  );
+}
 
 interface Editing {
   dateKey: string;
@@ -27,10 +39,11 @@ interface Editing {
   session: Session | null;
 }
 
-export function App() {
+function AppInner() {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(() => getMondayOf(new Date()));
+  const toast = useToast();
 
   const refresh = useCallback(async () => {
     const fresh = await listSessions({
@@ -47,30 +60,57 @@ export function App() {
   const daySessions = editing ? sessions.filter((s) => s.dateKey === editing.dateKey) : [];
 
   const handleCreate = async (input: SessionInput, _spill: OvernightSpill | null) => {
-    await addSession(input);
-    setEditing(null);
-    await refresh();
+    try {
+      await addSession(input);
+      toast.success(`Saved: ${input.label}`);
+      setEditing(null);
+      await refresh();
+    } catch (err) {
+      toast.error(`Couldn't save: ${(err as Error).message ?? 'unknown error'}`);
+    }
   };
 
   const handleUpdate = async (id: string, input: UpdateSessionInput) => {
-    await updateSession(id, input);
-    setEditing(null);
-    await refresh();
+    try {
+      await updateSession(id, input);
+      toast.success(`Saved: ${input.label}`);
+      setEditing(null);
+      await refresh();
+    } catch (err) {
+      toast.error(`Couldn't save: ${(err as Error).message ?? 'unknown error'}`);
+    }
   };
 
   const handleDelete = async (s: Session) => {
-    await deleteSession(s.id);
-    await refresh();
+    try {
+      await deleteSession(s.id);
+      toast.success(`Deleted: ${s.label}`);
+      await refresh();
+    } catch (err) {
+      toast.error(`Couldn't delete: ${(err as Error).message ?? 'unknown error'}`);
+    }
   };
 
   const handleToggleDone = async (s: Session) => {
-    await toggleDone(s.id);
-    await refresh();
+    // No toast — this fires often enough that a notification stack
+    // would feel like noise. The visible strike-through is feedback
+    // enough.
+    try {
+      await toggleDone(s.id);
+      await refresh();
+    } catch (err) {
+      toast.error(`Couldn't toggle done: ${(err as Error).message ?? 'unknown error'}`);
+    }
   };
 
   const handleDuplicate = async (s: Session) => {
-    await duplicateSession(s);
-    await refresh();
+    try {
+      await duplicateSession(s);
+      toast.success(`Duplicated: ${s.label}`);
+      await refresh();
+    } catch (err) {
+      toast.error(`Couldn't duplicate: ${(err as Error).message ?? 'unknown error'}`);
+    }
   };
 
   const handlePrevWeek = useCallback(() => {
