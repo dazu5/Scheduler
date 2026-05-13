@@ -1,0 +1,21 @@
+[package]
+name        = "scheduler"
+version     = "0.0.1"
+edition     = "2021"
+description = "Personal time-tracking scheduler with always-on-top pill widget."
+publish     = false
+
+[lib]
+name = "scheduler"
+path = "src/lib.rs"
+
+[[bin]]
+name = "scheduler"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }
+tauri    = { version = "2", features = [] }

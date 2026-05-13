@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Tauri build artifacts
+src-tauri/WixTools/
+*.msi
+*.exe
+*.app
+*.dmg
+*.deb
+*.AppImage
+
+# Cargo.lock is committed (binary application) — do NOT ignore
+
+# Local config
+.env
+.env.local
+.env.*.local
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test outputs
+coverage/
+playwright-report/
+test-results/
+.nyc_output/
+
+# Tauri signing keys — NEVER commit
+*.pem
+*.key
+tauri-private.key
+tauri-private.key.pub

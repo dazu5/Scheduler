@@ -1,0 +1,32 @@
+/* Minimal styles to make the slice #2 grid readable in `tauri dev`.
+ * The full dark-theme + Tailwind v4 port from weekly_scheduler.html
+ * lands in slice #3 once the time module brings real date math. */
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0d0d0f;
+  color: #e0e0e0;
+  margin: 0;
+}
+
+body {
+  margin: 0;
+  padding: 1rem;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #2a2a2e;
+  text-align: left;
+  font-weight: 500;
+  background: #14141a;
+}
+
+tbody th {
+  width: 5rem;
+  font-variant-numeric: tabular-nums;
+}
