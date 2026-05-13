@@ -60,7 +60,9 @@ describe('summarize', () => {
         mk({ category: 'animation', startMin: 8 * 60, endMin: 11 * 60 }),
         mk({ category: 'workflow', startMin: 11 * 60, endMin: 12 * 60 }),
       ],
-      '2026-05-14': [mk({ dateKey: '2026-05-14', category: 'cornerman', startMin: 9 * 60, endMin: 12 * 60 })],
+      '2026-05-14': [
+        mk({ dateKey: '2026-05-14', category: 'cornerman', startMin: 9 * 60, endMin: 12 * 60 }),
+      ],
     };
     const out = summarize(days, new Date(2026, 4, 13), new Date(2026, 4, 14));
     expect(out.animation).toBe(3);
@@ -94,11 +96,15 @@ describe('summarizeLogged', () => {
 
   it('skips Days listed in offDays (contributes zero hours)', () => {
     const days: Record<string, Session[]> = {
-      '2026-05-13': [
-        mk({ category: 'cornerman', startMin: 9 * 60, endMin: 12 * 60, done: true }),
-      ],
+      '2026-05-13': [mk({ category: 'cornerman', startMin: 9 * 60, endMin: 12 * 60, done: true })],
       '2026-05-14': [
-        mk({ dateKey: '2026-05-14', category: 'cornerman', startMin: 9 * 60, endMin: 12 * 60, done: true }),
+        mk({
+          dateKey: '2026-05-14',
+          category: 'cornerman',
+          startMin: 9 * 60,
+          endMin: 12 * 60,
+          done: true,
+        }),
       ],
     };
     const out = summarizeLogged(days, new Date(2026, 4, 13), new Date(2026, 4, 14), {
@@ -111,9 +117,7 @@ describe('summarizeLogged', () => {
 describe('summarizeAll', () => {
   it('discovers the first/last Days containing Sessions and rolls up across the span', () => {
     const days: Record<string, Session[]> = {
-      '2026-05-13': [
-        mk({ category: 'animation', startMin: 8 * 60, endMin: 10 * 60 }),
-      ],
+      '2026-05-13': [mk({ category: 'animation', startMin: 8 * 60, endMin: 10 * 60 })],
       '2026-05-15': [
         mk({ dateKey: '2026-05-15', category: 'workflow', startMin: 9 * 60, endMin: 11 * 60 }),
       ],
@@ -211,9 +215,7 @@ describe('expectedHoursByNow', () => {
   it('counts an in-progress Session partially', () => {
     // 13:00–14:00 active at 13:30 → 0.5h expected so far
     const days: Record<string, Session[]> = {
-      '2026-05-13': [
-        mk({ category: 'animation', startMin: 13 * 60, endMin: 14 * 60 }),
-      ],
+      '2026-05-13': [mk({ category: 'animation', startMin: 13 * 60, endMin: 14 * 60 })],
     };
     const expected = expectedHoursByNow(days, 'animation', WEEK_START, NOW, {
       offDays: new Set(),
@@ -239,8 +241,6 @@ describe('expectedHoursByNow', () => {
         mk({ dateKey: '2026-05-11', category: 'workflow', startMin: 8 * 60, endMin: 11 * 60 }),
       ],
     };
-    expect(
-      expectedHoursByNow(days, 'animation', WEEK_START, NOW, { offDays: new Set() }),
-    ).toBe(0);
+    expect(expectedHoursByNow(days, 'animation', WEEK_START, NOW, { offDays: new Set() })).toBe(0);
   });
 });

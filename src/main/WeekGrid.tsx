@@ -58,6 +58,10 @@ const INLINE_BTN =
 export interface WeekGridProps {
   weekStart?: Date;
   sessions?: Session[];
+  /** Id of the Session currently containing "now" — drives the red
+   *  ring + glow on that block. App owns the tick subscription and
+   *  passes the id down so WeekGrid stays a pure render. */
+  activeSessionId?: string | null;
   onCellClick?: (dateKey: string, hour: number) => void;
   onSessionClick?: (session: Session) => void;
   onToggleDone?: (session: Session) => void;
@@ -68,6 +72,7 @@ export interface WeekGridProps {
 export function WeekGrid({
   weekStart = getMondayOf(new Date()),
   sessions = [],
+  activeSessionId = null,
   onCellClick,
   onSessionClick,
   onToggleDone,
@@ -75,6 +80,7 @@ export function WeekGrid({
   onDelete,
 }: WeekGridProps = {}) {
   const dateKeys = WEEKDAYS.map((_, i) => dateKey(addDays(weekStart, i)));
+  const activeId = activeSessionId;
 
   return (
     <table className="w-full table-fixed border-collapse">
@@ -112,13 +118,18 @@ export function WeekGrid({
                       data-category={s.category}
                       data-testid="session-block"
                       data-done={s.done}
+                      data-active={s.id === activeId ? 'true' : undefined}
                       onClick={(e) => {
                         e.stopPropagation();
                         onSessionClick?.(s);
                       }}
                       className={`${SESSION_BLOCK_BASE} ${
                         CATEGORY_BG[s.category] ?? 'bg-cat-break-bg'
-                      } ${s.done ? 'opacity-55' : ''}`}
+                      } ${s.done ? 'opacity-55' : ''} ${
+                        s.id === activeId
+                          ? 'ring-1 ring-now shadow-[0_4px_14px_rgba(239,68,68,0.25)]'
+                          : ''
+                      }`}
                     >
                       <div className="flex items-start gap-1.5">
                         <div className="min-w-0 flex-1">

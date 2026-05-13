@@ -1,4 +1,4 @@
-// Issue #18 chunks 5 + 7 — Now Panel.
+// Issue #18 chunks 5 + 7 + issue #8 — Now Panel.
 //
 // Three slots — Active / Next / Today — laid out as one rounded
 // bar split by 1px gaps (matches weekly_scheduler.html's
@@ -6,35 +6,30 @@
 // content is denser.
 //
 //   Active  — Session whose [startMin, endMin) contains "now"; the
-//             status dot pulses red.
+//             status dot pulses red. Reflects the live tick payload
+//             so the "duration left" countdown decrements every
+//             second.
 //   Next    — soonest Session starting after "now" today; blue dot.
 //   Today   — total Sessions count + total scheduled hours; green dot.
 //
-// Values are computed once at render time. Slice #8 (Now Panel + 1
-// Hz tick) replaces the static `new Date()` read with a timer-
-// driven hook so the values refresh every second.
+// Live values come in via the `tick` prop — App owns the
+// `useTick(sessions)` subscription (one per app, not one per
+// surface) and threads the payload down. When `tick` is omitted
+// (e.g. unit tests) the component synthesises one from `sessions`
+// + `new Date()` so it still renders deterministically.
 
-import type { Session } from '../shared/ipc';
-import { dateKey, formatDuration, formatTime, nowMinutes } from '../shared/time';
+import type { Session, TimerTick } from '../shared/ipc';
+import { dateKey, formatDuration, formatTime } from '../shared/time';
 import { CategoryBadge } from './ui';
 
 export interface NowPanelProps {
   sessions: Session[];
-  /** Optional override — slice #8 will pass a tick-driven Date. */
-  now?: Date;
-}
-
-function getActive(sessions: Session[], today: string, nowMin: number): Session | null {
-  return (
-    sessions.find((s) => s.dateKey === today && s.startMin <= nowMin && s.endMin > nowMin) ?? null
-  );
-}
-
-function getNext(sessions: Session[], today: string, nowMin: number): Session | null {
-  const upcoming = sessions
-    .filter((s) => s.dateKey === today && s.startMin > nowMin)
-    .sort((a, b) => a.startMin - b.startMin);
-  return upcoming[0] ?? null;
+  /** Live tick payload — app owns the subscription via useTick so
+   *  WeekGrid and NowPanel re-render in the same frame on Session
+   *  start/end transitions. Optional so the component renders
+   *  deterministically in tests via vi.setSystemTime + a synthesised
+   *  TimerTick. */
+  tick?: TimerTick;
 }
 
 function todayTotals(sessions: Session[], today: string): { count: number; minutes: number } {
@@ -43,12 +38,27 @@ function todayTotals(sessions: Session[], today: string): { count: number; minut
   return { count: todays.length, minutes };
 }
 
-export function NowPanel({ sessions, now = new Date() }: NowPanelProps) {
-  const today = dateKey(now);
-  const nowMin = nowMinutes(now);
+function fallbackTick(sessions: Session[]): TimerTick {
+  const now = new Date();
+  const todayKey = dateKey(now);
+  const m = now.getHours() * 60 + now.getMinutes();
+  const today = sessions.filter((s) => s.dateKey === todayKey);
+  return {
+    active: today.find((s) => s.startMin <= m && m < s.endMin) ?? null,
+    next: today.filter((s) => s.startMin > m).sort((a, b) => a.startMin - b.startMin)[0] ?? null,
+    nowMin: m,
+    elapsed: 0,
+    planned: 0,
+  };
+}
 
-  const active = getActive(sessions, today, nowMin);
-  const next = getNext(sessions, today, nowMin);
+export function NowPanel({ sessions, tick }: NowPanelProps) {
+  const t = tick ?? fallbackTick(sessions);
+  const { active, next, nowMin } = t;
+
+  // Today's totals come from the props (no per-second recompute
+  // needed — count + minutes only change when sessions change).
+  const today = dateKey(new Date());
   const totals = todayTotals(sessions, today);
 
   return (

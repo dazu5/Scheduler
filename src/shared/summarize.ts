@@ -7,8 +7,8 @@
 // signature. The "logged = done" rule and the in-progress
 // fractional hour are encoded here, not in callers.
 
-import type { Category, Session } from './ipc';
 import { ALL_CATEGORIES, WORK_CATEGORIES } from './categories';
+import type { Category, Session } from './ipc';
 import { addDays, dateKey, nowMinutes, parseDateKey } from './time';
 
 export interface PerDayHours {
@@ -207,8 +207,7 @@ export function summarizeNow(sessions: Session[], now: Date): NowSummary {
  *  Category time is excluded. */
 export function dayWorkHours(sessions: Session[]): number {
   return sessions.reduce(
-    (acc, s) =>
-      WORK_CATEGORIES.includes(s.category) ? acc + (s.endMin - s.startMin) / 60 : acc,
+    (acc, s) => (WORK_CATEGORIES.includes(s.category) ? acc + (s.endMin - s.startMin) / 60 : acc),
     0,
   );
 }

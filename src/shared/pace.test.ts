@@ -86,11 +86,15 @@ describe('computePace — current week', () => {
     // Planned: animation 13:00–14:00 active at 13:30 → 0.5h expected so far.
     const days = {
       '2026-05-11': [
-        mk({ dateKey: '2026-05-11', category: 'animation', startMin: 8 * 60, endMin: 10 * 60, done: true }),
+        mk({
+          dateKey: '2026-05-11',
+          category: 'animation',
+          startMin: 8 * 60,
+          endMin: 10 * 60,
+          done: true,
+        }),
       ],
-      '2026-05-13': [
-        mk({ category: 'animation', startMin: 13 * 60, endMin: 14 * 60 }),
-      ],
+      '2026-05-13': [mk({ category: 'animation', startMin: 13 * 60, endMin: 14 * 60 })],
     };
     // Actual = 2h (Monday done) + 0.5h in-progress not counted in `sums`
     //         (sums comes from summarizeLogged, which doesn't count
@@ -110,7 +114,13 @@ describe('computePace — current week', () => {
   it('reads "Ahead Xh" when actual exceeds expected by more than 1h', () => {
     const days = {
       '2026-05-11': [
-        mk({ dateKey: '2026-05-11', category: 'animation', startMin: 8 * 60, endMin: 10 * 60, done: true }),
+        mk({
+          dateKey: '2026-05-11',
+          category: 'animation',
+          startMin: 8 * 60,
+          endMin: 10 * 60,
+          done: true,
+        }),
       ],
     };
     // expected ≈ 2h (Mon 8–10 fully past). actual = 5 → ahead 3.0h.
@@ -128,7 +138,13 @@ describe('computePace — current week', () => {
   it('reads "Behind Xh" when actual trails expected by more than 1h', () => {
     const days = {
       '2026-05-11': [
-        mk({ dateKey: '2026-05-11', category: 'animation', startMin: 8 * 60, endMin: 12 * 60, done: true }),
+        mk({
+          dateKey: '2026-05-11',
+          category: 'animation',
+          startMin: 8 * 60,
+          endMin: 12 * 60,
+          done: true,
+        }),
       ],
     };
     // expected = 4h (Mon 8–12 fully past). actual = 1 → behind 3.0h.

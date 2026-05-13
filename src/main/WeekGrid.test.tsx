@@ -191,4 +191,32 @@ describe('<WeekGrid />', () => {
     expect(onSessionClick).not.toHaveBeenCalled();
     expect(onCellClick).not.toHaveBeenCalled();
   });
+
+  it('tags the Session matching activeSessionId with data-active="true"', () => {
+    const live = mkSession({ id: 'live-one', label: 'now playing' });
+    const other = mkSession({ id: 'other', label: 'idle', startMin: 720, endMin: 780 });
+    render(
+      <WeekGrid
+        weekStart={new Date(2025, 0, 13)}
+        sessions={[live, other]}
+        activeSessionId="live-one"
+      />,
+    );
+
+    const blocks = screen.getAllByTestId('session-block');
+    const liveBlock = blocks.find((b) => b.textContent?.includes('now playing'));
+    const otherBlock = blocks.find((b) => b.textContent?.includes('idle'));
+    expect(liveBlock).toHaveAttribute('data-active', 'true');
+    expect(otherBlock).not.toHaveAttribute('data-active');
+  });
+
+  it('omits data-active when no activeSessionId is provided', () => {
+    render(
+      <WeekGrid
+        weekStart={new Date(2025, 0, 13)}
+        sessions={[mkSession({ id: 'one', label: 'nothing live' })]}
+      />,
+    );
+    expect(screen.getByTestId('session-block')).not.toHaveAttribute('data-active');
+  });
 });

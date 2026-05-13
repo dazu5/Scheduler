@@ -29,12 +29,7 @@ export const CATEGORY_INFO: Record<Category, CategoryInfo> = {
 export const WORK_CATEGORIES: readonly Category[] = ['animation', 'workflow', 'cornerman'];
 
 /** Every Category, in display order. */
-export const ALL_CATEGORIES: readonly Category[] = [
-  'animation',
-  'workflow',
-  'cornerman',
-  'break',
-];
+export const ALL_CATEGORIES: readonly Category[] = ['animation', 'workflow', 'cornerman', 'break'];
 
 /** A scheduled slice in the weekly template — used to derive
  *  per-Category "active days" counts for pace math. */
@@ -56,16 +51,36 @@ export const TEMPLATES: {
   weekday: [
     { category: 'animation', label: 'LR · AI Animation', startMin: 8 * 60, endMin: 11 * 60 },
     { category: 'break', label: 'Short break', startMin: 11 * 60, endMin: 11 * 60 + 15 },
-    { category: 'workflow', label: 'LR · AI Workflow', startMin: 11 * 60 + 15, endMin: 13 * 60 + 15 },
+    {
+      category: 'workflow',
+      label: 'LR · AI Workflow',
+      startMin: 11 * 60 + 15,
+      endMin: 13 * 60 + 15,
+    },
     { category: 'break', label: 'Lunch', startMin: 13 * 60 + 15, endMin: 14 * 60 + 15 },
-    { category: 'cornerman', label: 'Cornerman · Labeling', startMin: 14 * 60 + 15, endMin: 17 * 60 + 15 },
+    {
+      category: 'cornerman',
+      label: 'Cornerman · Labeling',
+      startMin: 14 * 60 + 15,
+      endMin: 17 * 60 + 15,
+    },
     { category: 'break', label: 'Short break', startMin: 17 * 60 + 15, endMin: 17 * 60 + 30 },
-    { category: 'cornerman', label: 'Cornerman · Labeling', startMin: 17 * 60 + 30, endMin: 20 * 60 + 30 },
+    {
+      category: 'cornerman',
+      label: 'Cornerman · Labeling',
+      startMin: 17 * 60 + 30,
+      endMin: 20 * 60 + 30,
+    },
   ],
   saturday: [
     { category: 'cornerman', label: 'Cornerman · Labeling', startMin: 8 * 60, endMin: 11 * 60 },
     { category: 'break', label: 'Break', startMin: 11 * 60, endMin: 11 * 60 + 30 },
-    { category: 'cornerman', label: 'Cornerman · Labeling', startMin: 11 * 60 + 30, endMin: 14 * 60 + 30 },
+    {
+      category: 'cornerman',
+      label: 'Cornerman · Labeling',
+      startMin: 11 * 60 + 30,
+      endMin: 14 * 60 + 30,
+    },
   ],
   sunday: [],
 };

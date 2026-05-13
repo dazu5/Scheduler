@@ -16,6 +16,7 @@ import { Header } from './Header';
 import { NowPanel } from './NowPanel';
 import { SessionEditor } from './SessionEditor';
 import { WeekGrid } from './WeekGrid';
+import { useTick } from './hooks/useTick';
 import { ToastProvider, useToast } from './ui';
 
 // Root component for the main window. Composes the major surfaces
@@ -44,6 +45,11 @@ function AppInner() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(() => getMondayOf(new Date()));
   const toast = useToast();
+  // Single tick subscription for the app — the live "active" Session
+  // id flows down to both <NowPanel /> and <WeekGrid /> so they
+  // re-render in the same frame when a Session starts/ends.
+  const tick = useTick(sessions);
+  const activeSessionId = tick.active?.id ?? null;
 
   const refresh = useCallback(async () => {
     const fresh = await listSessions({
@@ -132,10 +138,11 @@ function AppInner() {
         onToday={handleToday}
       />
       <main className="flex flex-1 flex-col gap-4 px-4 py-4">
-        <NowPanel sessions={sessions} />
+        <NowPanel sessions={sessions} tick={tick} />
         <WeekGrid
           weekStart={weekStart}
           sessions={sessions}
+          activeSessionId={activeSessionId}
           onCellClick={(dKey, hour) => {
             setEditing({ dateKey: dKey, hour, session: null });
           }}

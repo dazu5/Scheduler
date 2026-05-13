@@ -1,19 +1,17 @@
 // Behaviour tests for the useTick() hook — the React side of the
 // 1 Hz timer:tick contract. The hook returns the latest tick
 // payload (active / next / nowMin / elapsed / planned) and
-// refreshes whenever Rust emits `timer:tick`. Without a Tauri
-// runtime (i.e. during vitest), it falls back to a JS-side
-// setInterval that recomputes the same payload locally from the
-// supplied sessions every second.
+// updates whenever Rust emits `timer:tick`. Outside Tauri the
+// initial computation from `summarizeNow` is the only update —
+// there is no JS-side interval, so tests don't leak timers.
 
 import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Session } from '../../shared/ipc';
 
-vi.mock('@tauri-apps/api/event', () => ({
-  listen: vi.fn(() => Promise.resolve(() => {})),
-}));
-
+// `@tauri-apps/api/event` is mocked globally in vitest.setup.ts so
+// useTick's listen() call resolves cleanly. We re-import here just
+// to make assertions against the mock.
 import { listen } from '@tauri-apps/api/event';
 import { useTick } from './useTick';
 

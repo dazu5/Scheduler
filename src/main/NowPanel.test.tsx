@@ -1,10 +1,12 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Session } from '../shared/ipc';
 import { NowPanel } from './NowPanel';
 
 // 2026-05-13 13:30 — a Wednesday in the middle of the work day,
-// useful as the canonical "now" for these tests.
+// useful as the canonical "now" for these tests. The component's
+// `fallbackTick` reads `new Date()`, so vi.setSystemTime is enough to
+// pin the visible state without faking timers.
 const NOW = new Date(2026, 4, 13, 13, 30, 0);
 const TODAY = '2026-05-13';
 
@@ -25,15 +27,22 @@ const session = (overrides: Partial<Session> = {}): Session => ({
 });
 
 describe('<NowPanel />', () => {
+  beforeEach(() => {
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders three cards: Active, Next, Today', () => {
-    render(<NowPanel sessions={[]} now={NOW} />);
+    render(<NowPanel sessions={[]} />);
     expect(screen.getByTestId('now-active')).toBeInTheDocument();
     expect(screen.getByTestId('now-next')).toBeInTheDocument();
     expect(screen.getByTestId('now-today')).toBeInTheDocument();
   });
 
   it('shows the empty Active state when nothing is currently running', () => {
-    render(<NowPanel sessions={[]} now={NOW} />);
+    render(<NowPanel sessions={[]} />);
     expect(screen.getByTestId('now-active')).toHaveTextContent(/no active session/i);
   });
 
@@ -42,7 +51,6 @@ describe('<NowPanel />', () => {
     render(
       <NowPanel
         sessions={[session({ id: 'live', label: 'Live one', startMin: 780, endMin: 840 })]}
-        now={NOW}
       />,
     );
     expect(screen.getByTestId('now-active')).toHaveTextContent('Live one');
@@ -52,7 +60,6 @@ describe('<NowPanel />', () => {
     render(
       <NowPanel
         sessions={[session({ id: 'past', label: 'just ended', startMin: 720, endMin: 810 })]}
-        now={NOW}
       />,
     );
     expect(screen.getByTestId('now-active')).toHaveTextContent(/no active session/i);
@@ -65,14 +72,13 @@ describe('<NowPanel />', () => {
           session({ id: 'later', label: 'late', startMin: 1080 }),
           session({ id: 'sooner', label: 'sooner', startMin: 900 }),
         ]}
-        now={NOW}
       />,
     );
     expect(screen.getByTestId('now-next')).toHaveTextContent('sooner');
   });
 
   it('shows empty Next when nothing is scheduled later today', () => {
-    render(<NowPanel sessions={[session({ startMin: 600, endMin: 660 })]} now={NOW} />);
+    render(<NowPanel sessions={[session({ startMin: 600, endMin: 660 })]} />);
     expect(screen.getByTestId('now-next')).toHaveTextContent(/nothing else today/i);
   });
 
@@ -84,7 +90,6 @@ describe('<NowPanel />', () => {
           session({ id: 'b', startMin: 600, endMin: 720 }), // 120 min
           session({ id: 'c', dateKey: '2026-05-14', startMin: 540, endMin: 600 }), // tomorrow
         ]}
-        now={NOW}
       />,
     );
     expect(screen.getByTestId('now-today')).toHaveTextContent('2 Sessions scheduled');
@@ -92,7 +97,7 @@ describe('<NowPanel />', () => {
   });
 
   it('pluralises "Session" correctly for a single entry', () => {
-    render(<NowPanel sessions={[session()]} now={NOW} />);
+    render(<NowPanel sessions={[session()]} />);
     expect(screen.getByTestId('now-today')).toHaveTextContent('1 Session scheduled');
   });
 });
