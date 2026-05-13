@@ -200,3 +200,20 @@ pub fn update_session(conn: &mut Connection, id: &str, input: UpdateSessionInput
 
     tx.commit()
 }
+
+/// Delete a Session by id. Cascades to its `adjustments` rows via
+/// the `ON DELETE CASCADE` clause on `adjustments.session_id`.
+pub fn delete_session(conn: &Connection, id: &str) -> Result<()> {
+    conn.execute("DELETE FROM sessions WHERE id = ?", [id])?;
+    Ok(())
+}
+
+/// Flip `sessions.done` on the given row and bump `updated_at`.
+pub fn toggle_done(conn: &Connection, id: &str) -> Result<()> {
+    let now = now_ms();
+    conn.execute(
+        "UPDATE sessions SET done = CASE done WHEN 0 THEN 1 ELSE 0 END, updated_at = ? WHERE id = ?",
+        params![now, id],
+    )?;
+    Ok(())
+}

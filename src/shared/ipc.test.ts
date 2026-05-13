@@ -12,7 +12,15 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 import { invoke } from '@tauri-apps/api/core';
-import { addSession, listSessions, updateSession } from './ipc';
+import {
+  addSession,
+  deleteSession,
+  duplicateSession,
+  listSessions,
+  toggleDone,
+  updateSession,
+} from './ipc';
+import type { Session } from './ipc';
 
 describe('addSession (IPC wrapper)', () => {
   beforeEach(() => {
@@ -147,5 +155,60 @@ describe('updateSession (IPC wrapper)', () => {
 
     const args = vi.mocked(invoke).mock.calls[0][1] as { input: { overnightSpill: unknown } };
     expect(args.input.overnightSpill).toBeNull();
+  });
+});
+
+describe('deleteSession / toggleDone IPC wrappers', () => {
+  beforeEach(() => {
+    vi.mocked(invoke).mockReset();
+    vi.mocked(invoke).mockResolvedValue(undefined);
+  });
+
+  it('deleteSession invokes "delete_session" with { id }', async () => {
+    await deleteSession('abc-123');
+    expect(invoke).toHaveBeenCalledWith('delete_session', { id: 'abc-123' });
+  });
+
+  it('toggleDone invokes "toggle_done" with { id }', async () => {
+    await toggleDone('abc-123');
+    expect(invoke).toHaveBeenCalledWith('toggle_done', { id: 'abc-123' });
+  });
+});
+
+describe('duplicateSession', () => {
+  beforeEach(() => {
+    vi.mocked(invoke).mockReset();
+    vi.mocked(invoke).mockResolvedValue('new-uuid');
+  });
+
+  it("creates a new Session 15 minutes after the source's end, same fields", async () => {
+    const source: Session = {
+      id: 'src',
+      dateKey: '2025-01-13',
+      category: 'animation',
+      label: 'original',
+      startMin: 540,
+      endMin: 660,
+      notes: 'preserved',
+      done: true,
+      adjusted: false,
+      overnightLinkId: null,
+      createdAt: 0,
+      updatedAt: 0,
+    };
+
+    const newId = await duplicateSession(source);
+
+    expect(invoke).toHaveBeenCalledWith('add_session', {
+      input: {
+        dateKey: '2025-01-13',
+        category: 'animation',
+        label: 'original',
+        startMin: 675, // 660 + 15
+        endMin: 795, // 675 + (660 - 540)
+        notes: 'preserved',
+      },
+    });
+    expect(newId).toBe('new-uuid');
   });
 });

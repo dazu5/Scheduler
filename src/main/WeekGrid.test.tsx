@@ -125,4 +125,70 @@ describe('<WeekGrid />', () => {
     expect(onSessionClick).toHaveBeenCalledWith(target);
     expect(onCellClick).not.toHaveBeenCalled();
   });
+
+  it('fires onToggleDone (not edit / cell) when the done checkbox is clicked', () => {
+    const onSessionClick = vi.fn();
+    const onToggleDone = vi.fn();
+    const onCellClick = vi.fn();
+    const target = mkSession({ id: 't1', startMin: 540, label: 'task' });
+    render(
+      <WeekGrid
+        weekStart={new Date(2025, 0, 13)}
+        sessions={[target]}
+        onCellClick={onCellClick}
+        onSessionClick={onSessionClick}
+        onToggleDone={onToggleDone}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText('Mark task done'));
+
+    expect(onToggleDone).toHaveBeenCalledWith(target);
+    expect(onSessionClick).not.toHaveBeenCalled();
+    expect(onCellClick).not.toHaveBeenCalled();
+  });
+
+  it('fires onDuplicate (not edit / cell) when the ⎘ button is clicked', () => {
+    const onSessionClick = vi.fn();
+    const onDuplicate = vi.fn();
+    const onCellClick = vi.fn();
+    const target = mkSession({ id: 'dup-me', label: 'task' });
+    render(
+      <WeekGrid
+        weekStart={new Date(2025, 0, 13)}
+        sessions={[target]}
+        onCellClick={onCellClick}
+        onSessionClick={onSessionClick}
+        onDuplicate={onDuplicate}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText('Duplicate task'));
+
+    expect(onDuplicate).toHaveBeenCalledWith(target);
+    expect(onSessionClick).not.toHaveBeenCalled();
+    expect(onCellClick).not.toHaveBeenCalled();
+  });
+
+  it('fires onDelete (not edit / cell) when the 🗑 button is clicked', () => {
+    const onSessionClick = vi.fn();
+    const onDelete = vi.fn();
+    const onCellClick = vi.fn();
+    const target = mkSession({ id: 'del-me', label: 'task' });
+    render(
+      <WeekGrid
+        weekStart={new Date(2025, 0, 13)}
+        sessions={[target]}
+        onCellClick={onCellClick}
+        onSessionClick={onSessionClick}
+        onDelete={onDelete}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText('Delete task'));
+
+    expect(onDelete).toHaveBeenCalledWith(target);
+    expect(onSessionClick).not.toHaveBeenCalled();
+    expect(onCellClick).not.toHaveBeenCalled();
+  });
 });

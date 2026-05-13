@@ -1,12 +1,8 @@
-// The week-grid surface. Slice #2 landed the column / hour-row
-// structure; slice #3 chunk C added the clickable body cells +
-// chunk D added saved-Session blocks; slice #4 makes the Session
-// blocks themselves clickable so users can open the editor on a
-// filled cell. Click events stopPropagation so clicking a block
-// doesn't ALSO fire the cell's "add session here" handler.
-//
-// Multi-hour Sessions render only in their START cell for v0.1 —
-// visual span is a layout problem deferred to a later slice.
+// The week-grid surface. Slice #5 adds per-Session quick actions
+// inside each block — done checkbox, duplicate, delete — alongside
+// the slice #4 onSessionClick edit flow. Every nested control
+// stopPropagation so clicking it doesn't ALSO fire the block's
+// edit-open handler or the cell's add-session handler.
 
 import type { Session } from '../shared/ipc';
 import { addDays, dateKey, getMondayOf } from '../shared/time';
@@ -34,6 +30,9 @@ export interface WeekGridProps {
   sessions?: Session[];
   onCellClick?: (dateKey: string, hour: number) => void;
   onSessionClick?: (session: Session) => void;
+  onToggleDone?: (session: Session) => void;
+  onDuplicate?: (session: Session) => void;
+  onDelete?: (session: Session) => void;
 }
 
 export function WeekGrid({
@@ -41,6 +40,9 @@ export function WeekGrid({
   sessions = [],
   onCellClick,
   onSessionClick,
+  onToggleDone,
+  onDuplicate,
+  onDelete,
 }: WeekGridProps = {}) {
   const dateKeys = WEEKDAYS.map((_, i) => dateKey(addDays(weekStart, i)));
 
@@ -76,12 +78,40 @@ export function WeekGrid({
                       key={s.id}
                       data-category={s.category}
                       data-testid="session-block"
+                      data-done={s.done}
                       onClick={(e) => {
                         e.stopPropagation();
                         onSessionClick?.(s);
                       }}
                     >
-                      {s.label}
+                      <input
+                        type="checkbox"
+                        aria-label={`Mark ${s.label} done`}
+                        checked={s.done}
+                        onChange={() => onToggleDone?.(s)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <span>{s.label}</span>
+                      <button
+                        type="button"
+                        aria-label={`Duplicate ${s.label}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDuplicate?.(s);
+                        }}
+                      >
+                        ⎘
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Delete ${s.label}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete?.(s);
+                        }}
+                      >
+                        🗑
+                      </button>
                     </div>
                   ))}
                 </td>

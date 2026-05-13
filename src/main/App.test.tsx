@@ -11,16 +11,45 @@ vi.mock('../shared/ipc', () => ({
   addSession: vi.fn(),
   listSessions: vi.fn(),
   updateSession: vi.fn(),
+  deleteSession: vi.fn(),
+  toggleDone: vi.fn(),
+  duplicateSession: vi.fn(),
 }));
 
-import { addSession, listSessions, updateSession } from '../shared/ipc';
+import {
+  addSession,
+  deleteSession,
+  duplicateSession,
+  listSessions,
+  toggleDone,
+  updateSession,
+} from '../shared/ipc';
 import { App } from './App';
+
+const oneSession = (overrides: Record<string, unknown> = {}) => ({
+  id: 'session-1',
+  dateKey: '2026-05-13',
+  category: 'animation',
+  label: 'Test session',
+  startMin: 540,
+  endMin: 600,
+  notes: null,
+  done: false,
+  adjusted: false,
+  overnightLinkId: null,
+  createdAt: 0,
+  updatedAt: 0,
+  ...overrides,
+});
 
 describe('<App />', () => {
   beforeEach(() => {
     vi.mocked(addSession).mockReset().mockResolvedValue('test-uuid');
     vi.mocked(listSessions).mockReset().mockResolvedValue([]);
     vi.mocked(updateSession).mockReset().mockResolvedValue(undefined);
+    vi.mocked(deleteSession).mockReset().mockResolvedValue(undefined);
+    vi.mocked(toggleDone).mockReset().mockResolvedValue(undefined);
+    vi.mocked(duplicateSession).mockReset().mockResolvedValue('dup-uuid');
   });
 
   it('renders the WeekGrid on mount', async () => {
@@ -118,6 +147,40 @@ describe('<App />', () => {
       'session-edit',
       expect.objectContaining({ label: 'after' }),
     );
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(2));
+  });
+
+  it('calls deleteSession then re-fetches when the 🗑 button is clicked', async () => {
+    vi.mocked(listSessions).mockResolvedValue([oneSession({ label: 'kill me' })]);
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByLabelText('Delete kill me'));
+
+    expect(deleteSession).toHaveBeenCalledWith('session-1');
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(2));
+  });
+
+  it('calls toggleDone then re-fetches when the done checkbox is clicked', async () => {
+    vi.mocked(listSessions).mockResolvedValue([oneSession({ label: 'mark me' })]);
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByLabelText('Mark mark me done'));
+
+    expect(toggleDone).toHaveBeenCalledWith('session-1');
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(2));
+  });
+
+  it('calls duplicateSession then re-fetches when the ⎘ button is clicked', async () => {
+    const src = oneSession({ label: 'copy me' });
+    vi.mocked(listSessions).mockResolvedValue([src]);
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByLabelText('Duplicate copy me'));
+
+    expect(duplicateSession).toHaveBeenCalledWith(src);
     await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(2));
   });
 

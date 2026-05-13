@@ -5,22 +5,25 @@ import {
   type SessionInput,
   type UpdateSessionInput,
   addSession,
+  deleteSession,
+  duplicateSession,
   listSessions,
+  toggleDone,
   updateSession,
 } from '../shared/ipc';
 import { addDays, dateKey, getMondayOf } from '../shared/time';
 import { SessionEditor } from './SessionEditor';
 import { WeekGrid } from './WeekGrid';
 
-// Root component for the main window. Slice #4 routes between two
-// flows from a single editor surface: clicking an empty grid cell
-// opens SessionEditor in create mode; clicking a saved Session
-// block opens it in edit mode pre-filled with that Session.
+// Root component for the main window. Slice #5 wires the
+// per-Session quick actions (toggle done, duplicate, delete)
+// alongside the existing create / edit flows. Every mutation
+// triggers a listSessions refresh so the grid stays in sync.
 
 interface Editing {
   dateKey: string;
   hour: number;
-  session: Session | null; // null → create flow
+  session: Session | null;
 }
 
 export function App() {
@@ -44,9 +47,6 @@ export function App() {
   const daySessions = editing ? sessions.filter((s) => s.dateKey === editing.dateKey) : [];
 
   const handleCreate = async (input: SessionInput, _spill: OvernightSpill | null) => {
-    // Create-flow overnight-split is deferred: slice #4 AC covers
-    // the edit path explicitly. add_session will gain a spill arg
-    // in a follow-up so create + edit are symmetric.
     await addSession(input);
     setEditing(null);
     await refresh();
@@ -55,6 +55,21 @@ export function App() {
   const handleUpdate = async (id: string, input: UpdateSessionInput) => {
     await updateSession(id, input);
     setEditing(null);
+    await refresh();
+  };
+
+  const handleDelete = async (s: Session) => {
+    await deleteSession(s.id);
+    await refresh();
+  };
+
+  const handleToggleDone = async (s: Session) => {
+    await toggleDone(s.id);
+    await refresh();
+  };
+
+  const handleDuplicate = async (s: Session) => {
+    await duplicateSession(s);
     await refresh();
   };
 
@@ -73,6 +88,9 @@ export function App() {
             session: s,
           });
         }}
+        onToggleDone={handleToggleDone}
+        onDuplicate={handleDuplicate}
+        onDelete={handleDelete}
       />
       {editing && (
         <SessionEditor

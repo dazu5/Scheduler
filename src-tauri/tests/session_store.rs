@@ -4,8 +4,8 @@
 use rusqlite::Connection;
 use scheduler::db::apply_migrations;
 use scheduler::session_store::{
-    add_session, list_sessions, update_session, AuditEntry, OvernightSpill, SessionInput,
-    UpdateSessionInput,
+    add_session, delete_session, list_sessions, toggle_done, update_session, AuditEntry,
+    OvernightSpill, SessionInput, UpdateSessionInput,
 };
 
 fn mk(date_key: &str, category: &str, label: &str, start_min: i64, end_min: i64) -> SessionInput {
@@ -257,6 +257,82 @@ fn update_session_with_overnight_spill_creates_a_linked_next_day_session() {
         Some(link),
         "the two halves share an overnight_link_id"
     );
+}
+
+#[test]
+fn delete_session_removes_the_row_and_cascades_to_its_adjustments() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    apply_migrations(&conn).unwrap();
+    let id = add_session(&conn, mk("2025-01-13", "animation", "to-delete", 540, 600)).unwrap();
+
+    // Generate an audit row by updating the Session.
+    update_session(
+        &mut conn,
+        &id,
+        UpdateSessionInput {
+            category: "animation".to_string(),
+            label: "renamed".to_string(),
+            start_min: 540,
+            end_min: 600,
+            notes: None,
+            audit: vec![AuditEntry {
+                field: "label".to_string(),
+                old_value: Some("to-delete".to_string()),
+                new_value: Some("renamed".to_string()),
+            }],
+            overnight_spill: None,
+        },
+    )
+    .unwrap();
+
+    let pre_audit: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM adjustments WHERE session_id = ?",
+            [&id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(pre_audit, 1, "audit row exists before delete");
+
+    delete_session(&conn, &id).unwrap();
+
+    let session_count: i64 = conn
+        .query_row("SELECT count(*) FROM sessions WHERE id = ?", [&id], |row| row.get(0))
+        .unwrap();
+    assert_eq!(session_count, 0, "session is gone");
+
+    let audit_count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM adjustments WHERE session_id = ?",
+            [&id],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(audit_count, 0, "adjustments cascaded with the session");
+}
+
+#[test]
+fn toggle_done_flips_the_done_flag_and_round_trips() {
+    let conn = Connection::open_in_memory().unwrap();
+    apply_migrations(&conn).unwrap();
+    let id = add_session(&conn, mk("2025-01-13", "workflow", "task", 540, 600)).unwrap();
+
+    let initial: i64 = conn
+        .query_row("SELECT done FROM sessions WHERE id = ?", [&id], |row| row.get(0))
+        .unwrap();
+    assert_eq!(initial, 0);
+
+    toggle_done(&conn, &id).unwrap();
+    let after_first: i64 = conn
+        .query_row("SELECT done FROM sessions WHERE id = ?", [&id], |row| row.get(0))
+        .unwrap();
+    assert_eq!(after_first, 1);
+
+    toggle_done(&conn, &id).unwrap();
+    let after_second: i64 = conn
+        .query_row("SELECT done FROM sessions WHERE id = ?", [&id], |row| row.get(0))
+        .unwrap();
+    assert_eq!(after_second, 0, "second toggle flips back to 0");
 }
 
 #[test]

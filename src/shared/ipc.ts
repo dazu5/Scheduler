@@ -72,3 +72,31 @@ export function listSessions(range: { start: string; end: string }): Promise<Ses
 export function updateSession(id: string, input: UpdateSessionInput): Promise<void> {
   return invoke<void>('update_session', { id, input });
 }
+
+/** Delete one Session. Cascades to its `adjustments` rows via
+ *  ON DELETE CASCADE on `adjustments.session_id`. */
+export function deleteSession(id: string): Promise<void> {
+  return invoke<void>('delete_session', { id });
+}
+
+/** Flip `done` on the given Session. */
+export function toggleDone(id: string): Promise<void> {
+  return invoke<void>('toggle_done', { id });
+}
+
+/** Create a duplicate Session 15 minutes after the source's end —
+ *  same dateKey, category, label, notes, and duration. Returns the
+ *  new Session's id. Implemented in JS over addSession; no
+ *  dedicated Rust command needed because the math is trivial. */
+export function duplicateSession(source: Session): Promise<string> {
+  const duration = source.endMin - source.startMin;
+  const newStart = source.endMin + 15;
+  return addSession({
+    dateKey: source.dateKey,
+    category: source.category,
+    label: source.label,
+    startMin: newStart,
+    endMin: newStart + duration,
+    notes: source.notes,
+  });
+}
