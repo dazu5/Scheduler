@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   type OvernightSpill,
   type Session,
@@ -12,13 +12,13 @@ import {
   updateSession,
 } from '../shared/ipc';
 import { addDays, dateKey, getMondayOf } from '../shared/time';
+import { Header } from './Header';
 import { SessionEditor } from './SessionEditor';
 import { WeekGrid } from './WeekGrid';
 
-// Root component for the main window. Slice #5 wires the
-// per-Session quick actions (toggle done, duplicate, delete)
-// alongside the existing create / edit flows. Every mutation
-// triggers a listSessions refresh so the grid stays in sync.
+// Root component for the main window. Issue #18 chunk 4 introduces
+// weekStart as state (was useMemo'd from new Date()) so the Header's
+// prev/next/today navigation can shift it.
 
 interface Editing {
   dateKey: string;
@@ -29,8 +29,7 @@ interface Editing {
 export function App() {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
-
-  const weekStart = useMemo(() => getMondayOf(new Date()), []);
+  const [weekStart, setWeekStart] = useState<Date>(() => getMondayOf(new Date()));
 
   const refresh = useCallback(async () => {
     const fresh = await listSessions({
@@ -73,25 +72,43 @@ export function App() {
     await refresh();
   };
 
+  const handlePrevWeek = useCallback(() => {
+    setWeekStart((prev) => addDays(prev, -7));
+  }, []);
+  const handleNextWeek = useCallback(() => {
+    setWeekStart((prev) => addDays(prev, 7));
+  }, []);
+  const handleToday = useCallback(() => {
+    setWeekStart(getMondayOf(new Date()));
+  }, []);
+
   return (
-    <main>
-      <WeekGrid
+    <div className="flex h-full min-h-screen flex-col bg-bg text-fg">
+      <Header
         weekStart={weekStart}
-        sessions={sessions}
-        onCellClick={(dKey, hour) => {
-          setEditing({ dateKey: dKey, hour, session: null });
-        }}
-        onSessionClick={(s) => {
-          setEditing({
-            dateKey: s.dateKey,
-            hour: Math.floor(s.startMin / 60),
-            session: s,
-          });
-        }}
-        onToggleDone={handleToggleDone}
-        onDuplicate={handleDuplicate}
-        onDelete={handleDelete}
+        onPrevWeek={handlePrevWeek}
+        onNextWeek={handleNextWeek}
+        onToday={handleToday}
       />
+      <main className="flex-1 px-4 py-4">
+        <WeekGrid
+          weekStart={weekStart}
+          sessions={sessions}
+          onCellClick={(dKey, hour) => {
+            setEditing({ dateKey: dKey, hour, session: null });
+          }}
+          onSessionClick={(s) => {
+            setEditing({
+              dateKey: s.dateKey,
+              hour: Math.floor(s.startMin / 60),
+              session: s,
+            });
+          }}
+          onToggleDone={handleToggleDone}
+          onDuplicate={handleDuplicate}
+          onDelete={handleDelete}
+        />
+      </main>
       {editing && (
         <SessionEditor
           editing={editing.session}
@@ -103,6 +120,6 @@ export function App() {
           onCancel={() => setEditing(null)}
         />
       )}
-    </main>
+    </div>
   );
 }
