@@ -1,11 +1,14 @@
-// Unified create + edit modal for Sessions. Replaces the slice #3
-// NewSessionModal — the `editing` prop selects between modes:
-//   - editing === null  → create flow; calls onCreate(input, spill)
-//   - editing === Session → edit flow; calls onUpdate(id, input)
+// Unified create + edit modal for Sessions. Refactored in issue #18
+// chunk 3 to use the primitive library (Modal, Input, Select,
+// TextArea, Button) and the Tailwind v4 design tokens.
 //
-// Slice #4 adds the live overlap warning, the overnight hint, the
-// audit-log generation via applySessionEdit, and Esc / Ctrl+Enter
-// keyboard shortcuts.
+//   editing === null   → create flow; calls onCreate(input, spill)
+//   editing === Session → edit flow; calls onUpdate(id, input)
+//
+// The Modal primitive owns Escape-to-close and focus management;
+// this component owns Ctrl/Cmd+Enter to submit, live overlap
+// detection, the overnight-spill hint, and the audit-log generation
+// via applySessionEdit.
 
 import { useEffect, useState } from 'react';
 import { applySessionEdit } from '../shared/adjustments';
@@ -19,6 +22,7 @@ import {
   parseDateKey,
   readEditTimes,
 } from '../shared/time';
+import { Button, Input, Modal, Select, TextArea } from './ui';
 
 const CATEGORIES = ['animation', 'workflow', 'cornerman', 'break'] as const;
 type Category = (typeof CATEGORIES)[number];
@@ -71,12 +75,10 @@ export function SessionEditor({
         })
       : [];
 
+  // Modal owns Escape; this handler covers Ctrl/Cmd+Enter to submit.
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onCancel();
-      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         const form = document.querySelector<HTMLFormElement>('form[data-role="session-editor"]');
         form?.requestSubmit();
@@ -84,7 +86,7 @@ export function SessionEditor({
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [onCancel]);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,67 +146,79 @@ export function SessionEditor({
   const overnightHintEnd = parsed?.overnightEnd;
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: native <dialog> needs .showModal() which happy-dom partial-mocks; div + role keeps tests portable, revisit when we polish UX
-    <div role="dialog" aria-label={dialogTitle}>
-      <form data-role="session-editor" onSubmit={handleSubmit}>
-        <h2>
-          {dialogTitle} — {originDateKey}
+    <Modal title={dialogTitle} onClose={onCancel}>
+      <form data-role="session-editor" onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <h2 className="m-0 text-xs font-semibold uppercase tracking-wider text-fg-muted">
+          {dialogTitle} <span className="text-fg-muted/60">— {originDateKey}</span>
         </h2>
 
-        <label>
-          Category
-          <select value={category} onChange={(e) => setCategory(e.target.value as Category)}>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Input label="Label" type="text" value={label} onChange={(e) => setLabel(e.target.value)} />
 
-        <label>
-          Label
-          {/* biome-ignore lint/a11y/noAutofocus: editor convention from
-              weekly_scheduler.html — first field gets focus on open */}
-          <input type="text" value={label} onChange={(e) => setLabel(e.target.value)} autoFocus />
-        </label>
+        <Select
+          label="Category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as Category)}
+        >
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </Select>
 
-        <label>
-          Start
-          <input type="time" step="900" value={start} onChange={(e) => setStart(e.target.value)} />
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Start"
+            type="time"
+            step="900"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+          />
+          <Input
+            label="End"
+            type="time"
+            step="900"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+          />
+        </div>
 
-        <label>
-          End
-          <input type="time" step="900" value={end} onChange={(e) => setEnd(e.target.value)} />
-        </label>
-
-        <label>
-          Notes
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </label>
+        <TextArea label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
 
         {typeof overnightHintEnd === 'number' && overnightHintEnd > 0 && (
-          <p data-testid="overnight-hint">
-            ↪ Ends {formatTime(overnightHintEnd)} the next day — saved as two linked blocks.
+          <p
+            data-testid="overnight-hint"
+            className="m-0 rounded-md bg-surface-2 px-3 py-2 text-xs text-fg-muted"
+          >
+            ↪ Ends {formatTime(overnightHintEnd)} the next day — saved as two linked Sessions.
           </p>
         )}
 
         {overlaps.length > 0 && (
-          <p role="alert" data-testid="overlap-warning">
+          <p
+            role="alert"
+            data-testid="overlap-warning"
+            className="m-0 rounded-md bg-warn/10 px-3 py-2 text-xs text-warn"
+          >
             ⚠ Overlaps with {overlaps.map((o) => o.label).join(', ')}. You can still save.
           </p>
         )}
 
-        {error && <p role="alert">{error}</p>}
+        {error && (
+          <p role="alert" className="m-0 rounded-md bg-danger/10 px-3 py-2 text-xs text-danger">
+            {error}
+          </p>
+        )}
 
-        <div>
-          <button type="button" onClick={onCancel}>
+        <div className="mt-1 flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onCancel}>
             Cancel
-          </button>
-          <button type="submit">Save</button>
+          </Button>
+          <Button type="submit" variant="primary">
+            Save
+          </Button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }

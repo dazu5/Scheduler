@@ -58,11 +58,16 @@ export function Modal({ title, onClose, dismissOnBackdrop = true, children }: Mo
   }, [onClose]);
 
   // Focus restoration: remember whatever was focused at mount, push
-  // focus into the dialog, and return it on unmount.
+  // focus into the dialog, and return it on unmount. If a child
+  // already grabbed focus via `autoFocus` we leave it alone — that's
+  // a deliberate choice by the caller.
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    const focusable = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-    focusable?.focus();
+    const root = dialogRef.current;
+    if (root && !root.contains(document.activeElement)) {
+      const focusable = root.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      focusable?.focus();
+    }
     return () => {
       previous?.focus?.();
     };
