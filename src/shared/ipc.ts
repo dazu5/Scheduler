@@ -89,6 +89,39 @@ export function toggleDone(id: string): Promise<void> {
   return invoke<void>('toggle_done', { id });
 }
 
+/** Summary returned by `import_json` — number of rows written. */
+export interface ImportSummary {
+  sessions: number;
+  offDays: number;
+}
+
+/** Import a v2/v3/v4 `weekly_scheduler.html` JSON payload. Rust runs
+ *  the pure `importV4` parser on its side and writes both Sessions
+ *  and (when off-Day storage lands in #7) off-Days in one
+ *  transaction; INSERT OR IGNORE on `sessions.id` makes re-imports
+ *  of the same payload idempotent. */
+export function importJson(json: string): Promise<ImportSummary> {
+  return invoke<ImportSummary>('import_json', { json });
+}
+
+/** Same as `importJson` but Rust reads the file from disk first.
+ *  Lets the UI hand the picked filesystem path straight through
+ *  without needing the `plugin-fs` allowlist on the JS side. */
+export function importJsonFromPath(path: string): Promise<ImportSummary> {
+  return invoke<ImportSummary>('import_json_from_path', { path });
+}
+
+/** Has the user been offered the v4 import prompt? Used to make the
+ *  onboarding modal first-launch-only. Persisted in the `kv` table. */
+export function hasOnboarded(): Promise<boolean> {
+  return invoke<boolean>('has_onboarded');
+}
+
+/** Mark the user as having completed (or skipped) onboarding. */
+export function setOnboarded(value: boolean): Promise<void> {
+  return invoke<void>('set_onboarded', { value });
+}
+
 /** Create a duplicate Session 15 minutes after the source's end —
  *  same dateKey, category, label, notes, and duration. Returns the
  *  new Session's id. Implemented in JS over addSession; no

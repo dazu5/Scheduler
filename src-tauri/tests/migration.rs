@@ -75,6 +75,25 @@ fn migrations_create_adjustments_table_for_audit_log() {
 }
 
 #[test]
+fn migrations_create_off_days_table_for_issue_12_import() {
+    // The off-Days table lands in v1 alongside the kv table — issue
+    // #12 needs both to land the v4 import + first-launch onboarding,
+    // and there are no production users yet so extending v1 is fine.
+    let conn = Connection::open_in_memory().expect("open in-memory db");
+    apply_migrations(&conn).expect("apply migrations");
+
+    assert_table_has_columns(&conn, "off_days", &["date_key", "reason", "created_at"]);
+}
+
+#[test]
+fn migrations_create_kv_table_for_settings_flags() {
+    let conn = Connection::open_in_memory().expect("open in-memory db");
+    apply_migrations(&conn).expect("apply migrations");
+
+    assert_table_has_columns(&conn, "kv", &["key", "value"]);
+}
+
+#[test]
 fn migrations_are_idempotent_when_applied_twice() {
     let conn = Connection::open_in_memory().unwrap();
     apply_migrations(&conn).unwrap();

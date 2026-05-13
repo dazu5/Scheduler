@@ -7,13 +7,16 @@ import {
   addSession,
   deleteSession,
   duplicateSession,
+  hasOnboarded,
   listSessions,
+  setOnboarded,
   toggleDone,
   updateSession,
 } from '../shared/ipc';
 import { addDays, dateKey, getMondayOf } from '../shared/time';
 import { Header } from './Header';
 import { NowPanel } from './NowPanel';
+import { type OnboardingCompleteResult, OnboardingModal } from './OnboardingModal';
 import { SessionEditor } from './SessionEditor';
 import { WeekGrid } from './WeekGrid';
 import { ToastProvider, useToast } from './ui';
@@ -39,10 +42,18 @@ interface Editing {
   session: Session | null;
 }
 
+// One of two reasons the OnboardingModal is open:
+//   - 'first-launch': hasOnboarded() returned false; closing this
+//     modal writes setOnboarded(true).
+//   - 'settings':     the user pressed the Settings button after
+//     already onboarding; closing does NOT touch the flag.
+type OnboardingReason = 'first-launch' | 'settings';
+
 function AppInner() {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(() => getMondayOf(new Date()));
+  const [onboarding, setOnboarding] = useState<OnboardingReason | null>(null);
   const toast = useToast();
 
   const refresh = useCallback(async () => {
@@ -56,6 +67,44 @@ function AppInner() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Check the kv flag once on mount. If the user has never seen the
+  // import prompt, raise it now. Idempotent on remount because the
+  // close handler writes the flag.
+  useEffect(() => {
+    let cancelled = false;
+    hasOnboarded().then((done) => {
+      if (cancelled) return;
+      if (!done) setOnboarding('first-launch');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleOnboardingComplete = useCallback(
+    async (result: OnboardingCompleteResult) => {
+      const wasFirstLaunch = onboarding === 'first-launch';
+      setOnboarding(null);
+      if (wasFirstLaunch) {
+        try {
+          await setOnboarded(true);
+        } catch (err) {
+          toast.error(`Couldn't save onboarding flag: ${(err as Error).message ?? 'unknown'}`);
+        }
+      }
+      // After a successful import, surface the freshly imported rows
+      // in the week grid.
+      if (!result.skipped) {
+        await refresh();
+      }
+    },
+    [onboarding, refresh, toast],
+  );
+
+  const handleOpenSettings = useCallback(() => {
+    setOnboarding('settings');
+  }, []);
 
   const daySessions = editing ? sessions.filter((s) => s.dateKey === editing.dateKey) : [];
 
@@ -130,6 +179,7 @@ function AppInner() {
         onPrevWeek={handlePrevWeek}
         onNextWeek={handleNextWeek}
         onToday={handleToday}
+        onOpenSettings={handleOpenSettings}
       />
       <main className="flex flex-1 flex-col gap-4 px-4 py-4">
         <NowPanel sessions={sessions} />
@@ -162,6 +212,7 @@ function AppInner() {
           onCancel={() => setEditing(null)}
         />
       )}
+      {onboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
     </div>
   );
 }

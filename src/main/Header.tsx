@@ -26,9 +26,20 @@ export interface HeaderProps {
   onPrevWeek: () => void;
   onNextWeek: () => void;
   onToday: () => void;
+  /** Open the Settings surface. For issue #12 this is just the
+   *  import-from-v4 re-entry point; the full Settings panel ships in
+   *  a later slice. Optional so tests/stories that don't care can
+   *  omit it. */
+  onOpenSettings?: () => void;
 }
 
-export function Header({ weekStart, onPrevWeek, onNextWeek, onToday }: HeaderProps) {
+export function Header({
+  weekStart,
+  onPrevWeek,
+  onNextWeek,
+  onToday,
+  onOpenSettings,
+}: HeaderProps) {
   useKeyboardShortcut('ArrowLeft', onPrevWeek);
   useKeyboardShortcut('ArrowRight', onNextWeek);
   useKeyboardShortcut('t', onToday);
@@ -52,6 +63,11 @@ export function Header({ weekStart, onPrevWeek, onNextWeek, onToday }: HeaderPro
         >
           {formatWeekRange(weekStart)}
         </span>
+        {onOpenSettings && (
+          <Button variant="secondary" size="sm" onClick={onOpenSettings} aria-label="Settings">
+            Settings
+          </Button>
+        )}
       </div>
     </header>
   );
