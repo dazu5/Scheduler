@@ -61,6 +61,21 @@ export interface UpdateSessionInput {
   overnightSpill: OvernightSpill | null;
 }
 
+/** Payload of the `timer:tick` event emitted by Rust every second.
+ *  Single source of truth for "what is happening right now today"
+ *  shared between main window and pill window (slice #10). Shape
+ *  matches `summarizeNow` so the React hook can pass it straight
+ *  through to the Now Panel. */
+export interface TimerTick {
+  active: Session | null;
+  next: Session | null;
+  nowMin: number;
+  /** Hours of work elapsed today, including in-progress fraction. */
+  elapsed: number;
+  /** Total planned work hours today. */
+  planned: number;
+}
+
 /** Insert a Session and return its generated id (UUIDv4). */
 export function addSession(input: SessionInput): Promise<string> {
   return invoke<string>('add_session', { input });
