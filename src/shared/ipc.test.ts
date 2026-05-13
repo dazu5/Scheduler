@@ -16,8 +16,12 @@ import {
   addSession,
   deleteSession,
   duplicateSession,
+  hasOnboarded,
+  importJson,
+  importJsonFromPath,
   listSessions,
   redoCommand,
+  setOnboarded,
   toggleDone,
   undoCommand,
   updateSession,
@@ -174,6 +178,49 @@ describe('deleteSession / toggleDone IPC wrappers', () => {
   it('toggleDone invokes "toggle_done" with { id }', async () => {
     await toggleDone('abc-123');
     expect(invoke).toHaveBeenCalledWith('toggle_done', { id: 'abc-123' });
+  });
+});
+
+describe('importJson (IPC wrapper)', () => {
+  beforeEach(() => {
+    vi.mocked(invoke).mockReset();
+  });
+
+  it('invokes "import_json" with the raw json string under `json` and returns the count summary', async () => {
+    vi.mocked(invoke).mockResolvedValue({ sessions: 12, offDays: 2 });
+
+    const result = await importJson('{"version":4,"days":{}}');
+
+    expect(invoke).toHaveBeenCalledWith('import_json', { json: '{"version":4,"days":{}}' });
+    expect(result).toEqual({ sessions: 12, offDays: 2 });
+  });
+
+  it('importJsonFromPath invokes "import_json_from_path" with the picked path', async () => {
+    vi.mocked(invoke).mockResolvedValue({ sessions: 7, offDays: 0 });
+
+    const r = await importJsonFromPath('/tmp/x.json');
+
+    expect(invoke).toHaveBeenCalledWith('import_json_from_path', { path: '/tmp/x.json' });
+    expect(r).toEqual({ sessions: 7, offDays: 0 });
+  });
+});
+
+describe('hasOnboarded / setOnboarded IPC wrappers', () => {
+  beforeEach(() => {
+    vi.mocked(invoke).mockReset();
+  });
+
+  it('hasOnboarded invokes "has_onboarded" with no args and returns the boolean', async () => {
+    vi.mocked(invoke).mockResolvedValue(false);
+    const r = await hasOnboarded();
+    expect(invoke).toHaveBeenCalledWith('has_onboarded');
+    expect(r).toBe(false);
+  });
+
+  it('setOnboarded invokes "set_onboarded" with the boolean', async () => {
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    await setOnboarded(true);
+    expect(invoke).toHaveBeenCalledWith('set_onboarded', { value: true });
   });
 });
 

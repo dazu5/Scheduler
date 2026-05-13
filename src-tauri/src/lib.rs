@@ -6,5 +6,6 @@
 //! in later slices.
 
 pub mod db;
+pub mod migration;
 pub mod session_store;
 pub mod undo_stack;

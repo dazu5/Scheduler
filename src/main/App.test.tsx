@@ -16,15 +16,26 @@ vi.mock('../shared/ipc', () => ({
   duplicateSession: vi.fn(),
   undoCommand: vi.fn(),
   redoCommand: vi.fn(),
+  hasOnboarded: vi.fn(),
+  setOnboarded: vi.fn(),
+  importJsonFromPath: vi.fn(),
 }));
 
+vi.mock('@tauri-apps/plugin-dialog', () => ({
+  open: vi.fn(),
+}));
+
+import { open } from '@tauri-apps/plugin-dialog';
 import {
   type Session,
   addSession,
   deleteSession,
   duplicateSession,
+  hasOnboarded,
+  importJsonFromPath,
   listSessions,
   redoCommand,
+  setOnboarded,
   toggleDone,
   undoCommand,
   updateSession,
@@ -57,6 +68,14 @@ describe('<App />', () => {
     vi.mocked(duplicateSession).mockReset().mockResolvedValue('dup-uuid');
     vi.mocked(undoCommand).mockReset().mockResolvedValue(null);
     vi.mocked(redoCommand).mockReset().mockResolvedValue(null);
+    // Existing tests assume onboarding has already been completed —
+    // they exercise WeekGrid/SessionEditor flows, not the first-launch
+    // prompt. The first-launch prompt is covered by its dedicated
+    // describe block at the bottom of this file.
+    vi.mocked(hasOnboarded).mockReset().mockResolvedValue(true);
+    vi.mocked(setOnboarded).mockReset().mockResolvedValue(undefined);
+    vi.mocked(importJsonFromPath).mockReset().mockResolvedValue({ sessions: 0, offDays: 0 });
+    vi.mocked(open).mockReset();
   });
 
   it('renders the WeekGrid on mount', async () => {
@@ -225,6 +244,82 @@ describe('<App />', () => {
 
     const toast = await screen.findByRole('status');
     expect(toast).toHaveTextContent('Deleted: bye');
+  });
+
+  // --- first-launch onboarding flow --------------------------------
+
+  it('shows the onboarding modal on mount when hasOnboarded() is false', async () => {
+    vi.mocked(hasOnboarded).mockResolvedValueOnce(false);
+    render(<App />);
+
+    expect(
+      await screen.findByRole('dialog', { name: /import from weekly_scheduler\.html/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('does NOT show the onboarding modal when hasOnboarded() returns true', async () => {
+    vi.mocked(hasOnboarded).mockResolvedValueOnce(true);
+    render(<App />);
+    await waitFor(() => expect(hasOnboarded).toHaveBeenCalled());
+
+    // Give the modal a chance to appear if it were going to.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(
+      screen.queryByRole('dialog', { name: /import from weekly_scheduler\.html/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('calls setOnboarded(true) after the user clicks Skip on the first-launch modal', async () => {
+    vi.mocked(hasOnboarded).mockResolvedValueOnce(false);
+    render(<App />);
+    const dialog = await screen.findByRole('dialog', {
+      name: /import from weekly_scheduler\.html/i,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /skip/i }));
+
+    await waitFor(() => expect(setOnboarded).toHaveBeenCalledWith(true));
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+  });
+
+  it('calls setOnboarded(true) and refreshes Sessions after a successful import', async () => {
+    vi.mocked(hasOnboarded).mockResolvedValueOnce(false);
+    vi.mocked(open).mockResolvedValue('/tmp/sched.json');
+    vi.mocked(importJsonFromPath).mockResolvedValueOnce({ sessions: 5, offDays: 1 });
+
+    render(<App />);
+    await screen.findByRole('dialog', {
+      name: /import from weekly_scheduler\.html/i,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^import$/i }));
+
+    await waitFor(() => expect(setOnboarded).toHaveBeenCalledWith(true));
+    // listSessions fires once on mount + once on import-complete refresh.
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(2));
+  });
+
+  it('Header exposes a "Settings" button that re-opens the import modal', async () => {
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+
+    expect(
+      screen.getByRole('dialog', { name: /import from weekly_scheduler\.html/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('Settings → Skip does NOT call setOnboarded again (already onboarded)', async () => {
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /skip/i }));
+
+    // The Settings re-open path closes the modal without writing the
+    // onboarded flag again — it's already set.
+    expect(setOnboarded).not.toHaveBeenCalled();
   });
 
   it('fires an error toast when a mutation fails', async () => {

@@ -9,6 +9,7 @@
 use std::sync::Mutex;
 
 use rusqlite::Connection;
+use scheduler::migration::{self, ImportSummary};
 use scheduler::session_store::{self, Session, SessionInput, UpdateSessionInput};
 use scheduler::undo_stack::{self, UndoStack};
 use tauri::{Manager, State};
@@ -86,8 +87,33 @@ fn redo(db: State<DbState>, undo_state: State<UndoState>) -> Result<Option<Strin
     undo_stack::redo(&mut conn, &mut stack).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn import_json(state: State<DbState>, json: String) -> Result<ImportSummary, String> {
+    let mut conn = state.0.lock().map_err(|e| e.to_string())?;
+    migration::import_json(&mut conn, &json).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn import_json_from_path(state: State<DbState>, path: String) -> Result<ImportSummary, String> {
+    let mut conn = state.0.lock().map_err(|e| e.to_string())?;
+    migration::import_json_from_path(&mut conn, &path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn has_onboarded(state: State<DbState>) -> Result<bool, String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    migration::has_onboarded(&conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_onboarded(state: State<DbState>, value: bool) -> Result<(), String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    migration::set_onboarded(&conn, value).map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let data_dir = app
                 .path()
@@ -111,6 +137,10 @@ fn main() {
             toggle_done,
             undo,
             redo,
+            import_json,
+            import_json_from_path,
+            has_onboarded,
+            set_onboarded,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -42,6 +42,17 @@ CREATE TABLE IF NOT EXISTS adjustments (
 
 CREATE INDEX IF NOT EXISTS idx_adjustments_session
     ON adjustments(session_id);
+
+CREATE TABLE IF NOT EXISTS off_days (
+    date_key   TEXT PRIMARY KEY,
+    reason     TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS kv (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 ";
 
 /// Apply every pending migration to `conn`. Idempotent — calling
