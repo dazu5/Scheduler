@@ -17,7 +17,9 @@ import {
   deleteSession,
   duplicateSession,
   listSessions,
+  redoCommand,
   toggleDone,
+  undoCommand,
   updateSession,
 } from './ipc';
 import type { Session } from './ipc';
@@ -210,5 +212,37 @@ describe('duplicateSession', () => {
       },
     });
     expect(newId).toBe('new-uuid');
+  });
+});
+
+describe('undoCommand / redoCommand (IPC wrappers)', () => {
+  beforeEach(() => {
+    vi.mocked(invoke).mockReset();
+  });
+
+  it('undoCommand invokes the "undo" Tauri command with no args and returns its label', async () => {
+    vi.mocked(invoke).mockResolvedValue('edit Session');
+    const label = await undoCommand();
+    expect(invoke).toHaveBeenCalledWith('undo');
+    expect(label).toBe('edit Session');
+  });
+
+  it('undoCommand returns null when there is nothing to undo', async () => {
+    vi.mocked(invoke).mockResolvedValue(null);
+    const label = await undoCommand();
+    expect(label).toBeNull();
+  });
+
+  it('redoCommand invokes the "redo" Tauri command with no args and returns its label', async () => {
+    vi.mocked(invoke).mockResolvedValue('add Session');
+    const label = await redoCommand();
+    expect(invoke).toHaveBeenCalledWith('redo');
+    expect(label).toBe('add Session');
+  });
+
+  it('redoCommand returns null when there is nothing to redo', async () => {
+    vi.mocked(invoke).mockResolvedValue(null);
+    const label = await redoCommand();
+    expect(label).toBeNull();
   });
 });

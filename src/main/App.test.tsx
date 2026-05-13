@@ -14,6 +14,8 @@ vi.mock('../shared/ipc', () => ({
   deleteSession: vi.fn(),
   toggleDone: vi.fn(),
   duplicateSession: vi.fn(),
+  undoCommand: vi.fn(),
+  redoCommand: vi.fn(),
 }));
 
 import {
@@ -22,7 +24,9 @@ import {
   deleteSession,
   duplicateSession,
   listSessions,
+  redoCommand,
   toggleDone,
+  undoCommand,
   updateSession,
 } from '../shared/ipc';
 import { App } from './App';
@@ -51,6 +55,8 @@ describe('<App />', () => {
     vi.mocked(deleteSession).mockReset().mockResolvedValue(undefined);
     vi.mocked(toggleDone).mockReset().mockResolvedValue(undefined);
     vi.mocked(duplicateSession).mockReset().mockResolvedValue('dup-uuid');
+    vi.mocked(undoCommand).mockReset().mockResolvedValue(null);
+    vi.mocked(redoCommand).mockReset().mockResolvedValue(null);
   });
 
   it('renders the WeekGrid on mount', async () => {
@@ -235,5 +241,99 @@ describe('<App />', () => {
     const toast = await screen.findByRole('status');
     expect(toast).toHaveTextContent(/couldn['’]t save/i);
     expect(toast).toHaveAttribute('data-variant', 'error');
+  });
+
+  // -------------------------------------------------------------------
+  // Slice 5 — Undo / Redo keyboard shortcuts
+  // -------------------------------------------------------------------
+
+  it('calls undoCommand when Ctrl+Z is pressed', async () => {
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+
+    await waitFor(() => expect(undoCommand).toHaveBeenCalledTimes(1));
+  });
+
+  it('calls redoCommand when Ctrl+Shift+Z is pressed', async () => {
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true });
+
+    await waitFor(() => expect(redoCommand).toHaveBeenCalledTimes(1));
+    expect(undoCommand).not.toHaveBeenCalled();
+  });
+
+  it('calls redoCommand when Ctrl+Y is pressed (alternate redo binding)', async () => {
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.keyDown(window, { key: 'y', ctrlKey: true });
+
+    await waitFor(() => expect(redoCommand).toHaveBeenCalledTimes(1));
+  });
+
+  it('fires a "Undid: <label>" toast and re-fetches Sessions after Ctrl+Z', async () => {
+    vi.mocked(undoCommand).mockResolvedValueOnce('edit Session');
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+
+    const toast = await screen.findByRole('status');
+    expect(toast).toHaveTextContent('Undid: edit Session');
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(2));
+  });
+
+  it('fires a "Redid: <label>" toast and re-fetches Sessions after Ctrl+Shift+Z', async () => {
+    vi.mocked(redoCommand).mockResolvedValueOnce('add Session');
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true });
+
+    const toast = await screen.findByRole('status');
+    expect(toast).toHaveTextContent('Redid: add Session');
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(2));
+  });
+
+  it('does not toast when undoCommand returns null (stack was empty)', async () => {
+    vi.mocked(undoCommand).mockResolvedValueOnce(null);
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+
+    // give microtasks a beat to settle without forcing a wait on a
+    // toast that should never appear
+    await waitFor(() => expect(undoCommand).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('suppresses Ctrl+Z while the SessionEditor modal is open', async () => {
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    // Open the editor modal — clicking any empty cell does it.
+    fireEvent.click(screen.getAllByRole('cell')[0]);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+
+    expect(undoCommand).not.toHaveBeenCalled();
+  });
+
+  it('suppresses Ctrl+Z while an input is focused (typing in the editor)', async () => {
+    render(<App />);
+    await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getAllByRole('cell')[0]);
+    const labelInput = screen.getByLabelText(/label/i) as HTMLInputElement;
+    labelInput.focus();
+    fireEvent.keyDown(labelInput, { key: 'z', ctrlKey: true });
+
+    expect(undoCommand).not.toHaveBeenCalled();
   });
 });
