@@ -1,28 +1,32 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { type Session, addSession, listSessions } from '../shared/ipc';
+import {
+  type OvernightSpill,
+  type Session,
+  type SessionInput,
+  type UpdateSessionInput,
+  addSession,
+  listSessions,
+  updateSession,
+} from '../shared/ipc';
 import { addDays, dateKey, getMondayOf } from '../shared/time';
-import { NewSessionModal } from './NewSessionModal';
+import { SessionEditor } from './SessionEditor';
 import { WeekGrid } from './WeekGrid';
 
-// Root component for the main window. Slice #3 ships the
-// click → modal → save → block-appears → restart-survives loop:
-//   - useEffect loads Sessions for the current week on mount.
-//   - onSave invokes addSession, clears the modal, refreshes the
-//     list so the new block renders in its cell.
-// Multi-week navigation (← → keyboard shortcuts) arrives in slice
-// #7 once the Now Panel + tick land.
+// Root component for the main window. Slice #4 routes between two
+// flows from a single editor surface: clicking an empty grid cell
+// opens SessionEditor in create mode; clicking a saved Session
+// block opens it in edit mode pre-filled with that Session.
 
 interface Editing {
   dateKey: string;
   hour: number;
+  session: Session | null; // null → create flow
 }
 
 export function App() {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
 
-  // Memoize weekStart so it has stable identity across renders —
-  // otherwise the useEffect deps array would re-fire each render.
   const weekStart = useMemo(() => getMondayOf(new Date()), []);
 
   const refresh = useCallback(async () => {
@@ -37,24 +41,47 @@ export function App() {
     refresh();
   }, [refresh]);
 
+  const daySessions = editing ? sessions.filter((s) => s.dateKey === editing.dateKey) : [];
+
+  const handleCreate = async (input: SessionInput, _spill: OvernightSpill | null) => {
+    // Create-flow overnight-split is deferred: slice #4 AC covers
+    // the edit path explicitly. add_session will gain a spill arg
+    // in a follow-up so create + edit are symmetric.
+    await addSession(input);
+    setEditing(null);
+    await refresh();
+  };
+
+  const handleUpdate = async (id: string, input: UpdateSessionInput) => {
+    await updateSession(id, input);
+    setEditing(null);
+    await refresh();
+  };
+
   return (
     <main>
       <WeekGrid
         weekStart={weekStart}
         sessions={sessions}
         onCellClick={(dKey, hour) => {
-          setEditing({ dateKey: dKey, hour });
+          setEditing({ dateKey: dKey, hour, session: null });
+        }}
+        onSessionClick={(s) => {
+          setEditing({
+            dateKey: s.dateKey,
+            hour: Math.floor(s.startMin / 60),
+            session: s,
+          });
         }}
       />
       {editing && (
-        <NewSessionModal
+        <SessionEditor
+          editing={editing.session}
           defaultDateKey={editing.dateKey}
           defaultHour={editing.hour}
-          onSave={async (input) => {
-            await addSession(input);
-            setEditing(null);
-            await refresh();
-          }}
+          daySessions={daySessions}
+          onCreate={handleCreate}
+          onUpdate={handleUpdate}
           onCancel={() => setEditing(null)}
         />
       )}

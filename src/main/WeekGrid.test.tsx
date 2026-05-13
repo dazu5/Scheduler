@@ -100,4 +100,29 @@ describe('<WeekGrid />', () => {
     expect(screen.getByLabelText('2025-01-13 9 AM')).toHaveTextContent('Quarter-past 9');
     expect(screen.getByLabelText('2025-01-14 12 PM')).toHaveTextContent('Noon-thirty');
   });
+
+  it('calls onSessionClick (not onCellClick) when a Session block is clicked', () => {
+    const onCellClick = vi.fn();
+    const onSessionClick = vi.fn();
+    const target = mkSession({
+      id: 'click-me',
+      dateKey: '2025-01-13',
+      startMin: 540,
+      label: 'Click target',
+    });
+    render(
+      <WeekGrid
+        weekStart={new Date(2025, 0, 13)}
+        sessions={[target]}
+        onCellClick={onCellClick}
+        onSessionClick={onSessionClick}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Click target'));
+
+    expect(onSessionClick).toHaveBeenCalledTimes(1);
+    expect(onSessionClick).toHaveBeenCalledWith(target);
+    expect(onCellClick).not.toHaveBeenCalled();
+  });
 });

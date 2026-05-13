@@ -12,7 +12,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 import { invoke } from '@tauri-apps/api/core';
-import { addSession, listSessions } from './ipc';
+import { addSession, listSessions, updateSession } from './ipc';
 
 describe('addSession (IPC wrapper)', () => {
   beforeEach(() => {
@@ -97,5 +97,55 @@ describe('listSessions (IPC wrapper)', () => {
     const result = await listSessions({ start: '2025-01-13', end: '2025-01-19' });
 
     expect(result).toEqual([fakeSession]);
+  });
+});
+
+describe('updateSession (IPC wrapper)', () => {
+  beforeEach(() => {
+    vi.mocked(invoke).mockReset();
+  });
+
+  it('invokes "update_session" with { id, input } and forwards audit + overnight', async () => {
+    vi.mocked(invoke).mockResolvedValue(undefined);
+
+    await updateSession('session-123', {
+      category: 'animation',
+      label: 'Updated label',
+      startMin: 540,
+      endMin: 1440,
+      notes: null,
+      audit: [{ field: 'label', oldValue: 'old', newValue: 'Updated label' }],
+      overnightSpill: { nextDateKey: '2025-01-14', endMin: 60 },
+    });
+
+    expect(invoke).toHaveBeenCalledWith('update_session', {
+      id: 'session-123',
+      input: {
+        category: 'animation',
+        label: 'Updated label',
+        startMin: 540,
+        endMin: 1440,
+        notes: null,
+        audit: [{ field: 'label', oldValue: 'old', newValue: 'Updated label' }],
+        overnightSpill: { nextDateKey: '2025-01-14', endMin: 60 },
+      },
+    });
+  });
+
+  it('passes overnightSpill: null for same-day edits', async () => {
+    vi.mocked(invoke).mockResolvedValue(undefined);
+
+    await updateSession('session-123', {
+      category: 'workflow',
+      label: 'Same day',
+      startMin: 540,
+      endMin: 600,
+      notes: null,
+      audit: [],
+      overnightSpill: null,
+    });
+
+    const args = vi.mocked(invoke).mock.calls[0][1] as { input: { overnightSpill: unknown } };
+    expect(args.input.overnightSpill).toBeNull();
   });
 });
