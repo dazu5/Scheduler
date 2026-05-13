@@ -1,47 +1,67 @@
-/* Tailwind v4 + design tokens (issue #18 chunk 1).
+/* Tailwind v4 + design tokens.
+ *
+ * Issue #18 chunk 7 — palette aligned to weekly_scheduler.html so the
+ * Tauri app inherits the same visual identity (orange "animation",
+ * dark-tinted Category backgrounds, four-tier surface stack, Inter
+ * stylistic alternates).
  *
  * v4 idiom: no `tailwind.config.js`. Tokens are defined via the
  * `@theme` directive directly in CSS — each `--color-*` / `--font-*`
- * becomes a utility (e.g. `--color-cat-animation` generates
- * `bg-cat-animation`, `text-cat-animation`, etc.).
- *
- * Issue #18 chunk 3 deleted the legacy hand-rolled rules for the
- * WeekGrid + SessionEditor surfaces; what remains here is the root /
- * body reset and the @theme + keyframe declarations. */
+ * / `--radius-*` becomes a utility (e.g. `--color-cat-animation`
+ * generates `bg-cat-animation`, `text-cat-animation`, etc.). */
 
 @import "tailwindcss";
 
 @theme {
-  /* Surface tiers */
-  --color-bg: #0d0d0f;
-  --color-surface: #14141a;
-  --color-surface-2: #1c1c24;
-  --color-border: #2a2a2e;
+  /* Surface tiers — slightly cooler blue-grey than the previous
+   * neutral charcoal; matches the predecessor's --bg/--surface
+   * stack exactly. */
+  --color-bg: #0a0e13;
+  --color-surface: #121821;
+  --color-surface-2: #1a2230;
+  --color-surface-3: #232c3d;
+  --color-border: #1f2733;
+  --color-border-strong: #2d3848;
 
   /* Text */
-  --color-fg: #e0e0e0;
-  --color-fg-muted: #9097a3;
+  --color-fg: #e8ecf1;
+  --color-fg-muted: #6b7686;
+  --color-fg-muted-2: #4a5366;
 
   /* Semantic accents */
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
+  --color-accent: #4ea1ff;
+  --color-accent-hover: #2563a8;
   --color-danger: #ef4444;
   --color-warn: #f59e0b;
-  --color-ok: #10b981;
+  --color-ok: #22c55e;
+  --color-now: #ef4444;
 
-  /* Category palette (used by Session blocks + CategoryBadge) */
-  --color-cat-animation: #3b82f6;
+  /* Category palette — `cat-X` is the bright accent (used for
+   * dots, pill text, stat names), `cat-X-bg` is the dark tinted
+   * fill (used for Session blocks). */
+  --color-cat-animation: #f59e0b;
+  --color-cat-animation-bg: #6b3f0e;
   --color-cat-workflow: #a855f7;
-  --color-cat-cornerman: #14b8a6;
-  --color-cat-break: #6b7280;
+  --color-cat-workflow-bg: #3d1f73;
+  --color-cat-cornerman: #10b981;
+  --color-cat-cornerman-bg: #0f4e36;
+  --color-cat-break: #64748b;
+  --color-cat-break-bg: #2a3344;
 
   /* Typography */
-  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, monospace;
+
+  /* Radius scale (matches predecessor's --r-sm/md/lg/xl). */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
 
   /* Motion */
   --animate-fade-in: fade-in 120ms ease-out;
   --animate-toast-in: toast-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-pulse-dot: pulse-dot 2s infinite;
 }
 
 @keyframes fade-in {
@@ -64,6 +84,16 @@
   }
 }
 
+@keyframes pulse-dot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+}
+
 /* Global reset + base typography. Component-level styling lives in
  * Tailwind utilities on the components themselves. */
 
@@ -72,13 +102,19 @@
   background: var(--color-bg);
   color: var(--color-fg);
   margin: 0;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 body {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }

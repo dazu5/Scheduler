@@ -1,12 +1,17 @@
-// Issue #18 chunk 5 — Now Panel placeholder.
+// Issue #18 chunks 5 + 7 — Now Panel.
 //
-// Three cards above the WeekGrid:
-//   Active  — the Session whose [startMin, endMin) contains "now"
-//   Next    — the soonest Session starting after "now" today
-//   Today   — count + total hours of all Sessions on today
+// Three slots — Active / Next / Today — laid out as one rounded
+// bar split by 1px gaps (matches weekly_scheduler.html's
+// `.now-strip`). Active gets a larger column (1.4fr) because its
+// content is denser.
 //
-// The values are computed once at render time. Slice #8 (Now Panel +
-// 1 Hz tick) replaces the static `Date.now()` read with a timer-
+//   Active  — Session whose [startMin, endMin) contains "now"; the
+//             status dot pulses red.
+//   Next    — soonest Session starting after "now" today; blue dot.
+//   Today   — total Sessions count + total scheduled hours; green dot.
+//
+// Values are computed once at render time. Slice #8 (Now Panel + 1
+// Hz tick) replaces the static `new Date()` read with a timer-
 // driven hook so the values refresh every second.
 
 import type { Session } from '../shared/ipc';
@@ -49,70 +54,104 @@ export function NowPanel({ sessions, now = new Date() }: NowPanelProps) {
   return (
     <section
       aria-label="Now panel"
-      className="grid grid-cols-1 gap-3 md:grid-cols-3"
       data-testid="now-panel"
+      className="grid overflow-hidden rounded-lg border border-border bg-border"
+      style={{ gridTemplateColumns: '1.4fr 1fr 1fr', gap: '1px' }}
     >
-      <Card label="Active" testid="now-active">
+      <Slot
+        testid="now-active"
+        label="Active"
+        dotClass={active ? 'bg-now animate-pulse-dot' : 'bg-fg-muted-2'}
+      >
         {active ? (
           <>
-            <CategoryBadge category={active.category} />
-            <strong className="block truncate text-base text-fg">{active.label}</strong>
-            <small className="block text-xs text-fg-muted tabular-nums">
+            <SlotMain accent="text-now">
+              <CategoryBadge category={active.category} />
+              <span className="truncate">{active.label}</span>
+            </SlotMain>
+            <SlotMeta>
               {formatTime(active.startMin)} → {formatTime(active.endMin)} ·{' '}
               {formatDuration(active.endMin - nowMin)} left
-            </small>
+            </SlotMeta>
           </>
         ) : (
-          <Empty>No active Session</Empty>
+          <SlotEmpty>No active Session</SlotEmpty>
         )}
-      </Card>
+      </Slot>
 
-      <Card label="Next" testid="now-next">
+      <Slot testid="now-next" label="Next" dotClass={next ? 'bg-accent' : 'bg-fg-muted-2'}>
         {next ? (
           <>
-            <CategoryBadge category={next.category} />
-            <strong className="block truncate text-base text-fg">{next.label}</strong>
-            <small className="block text-xs text-fg-muted tabular-nums">
+            <SlotMain>
+              <CategoryBadge category={next.category} />
+              <span className="truncate">{next.label}</span>
+            </SlotMain>
+            <SlotMeta>
               starts at {formatTime(next.startMin)} · in {formatDuration(next.startMin - nowMin)}
-            </small>
+            </SlotMeta>
           </>
         ) : (
-          <Empty>Nothing else today</Empty>
+          <SlotEmpty>Nothing else today</SlotEmpty>
         )}
-      </Card>
+      </Slot>
 
-      <Card label="Today" testid="now-today">
-        <strong className="block text-2xl text-fg tabular-nums">
-          {formatDuration(totals.minutes)}
-        </strong>
-        <small className="block text-xs text-fg-muted">
+      <Slot testid="now-today" label="Today" dotClass="bg-ok">
+        <SlotMain>
+          <span className="tabular-nums">{formatDuration(totals.minutes)}</span>
+        </SlotMain>
+        <SlotMeta>
           {totals.count} {totals.count === 1 ? 'Session' : 'Sessions'} scheduled
-        </small>
-      </Card>
+        </SlotMeta>
+      </Slot>
     </section>
   );
 }
 
-function Card({
-  label,
+function Slot({
   testid,
+  label,
+  dotClass,
   children,
 }: {
-  label: string;
   testid: string;
+  label: string;
+  dotClass: string;
   children: React.ReactNode;
 }) {
   return (
     <div
       data-testid={testid}
-      className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface p-3"
+      className="flex min-h-[60px] items-center gap-3 bg-surface px-3.5 py-2.5"
     >
-      <span className="text-xs font-semibold uppercase tracking-wider text-fg-muted">{label}</span>
+      <span className={`size-2 shrink-0 rounded-full ${dotClass}`} aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <div className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-fg-muted">
+          {label}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SlotMain({
+  accent = 'text-fg',
+  children,
+}: {
+  accent?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`flex items-center gap-1.5 text-[13px] font-semibold ${accent}`}>
       {children}
     </div>
   );
 }
 
-function Empty({ children }: { children: React.ReactNode }) {
-  return <span className="text-sm text-fg-muted">{children}</span>;
+function SlotMeta({ children }: { children: React.ReactNode }) {
+  return <div className="mt-0.5 text-[11px] tabular-nums text-fg-muted">{children}</div>;
+}
+
+function SlotEmpty({ children }: { children: React.ReactNode }) {
+  return <span className="text-[12px] italic text-fg-muted">{children}</span>;
 }

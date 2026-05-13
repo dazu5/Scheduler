@@ -9,7 +9,7 @@
 // add-Session handler — don't both fire on the same click.
 
 import type { Session } from '../shared/ipc';
-import { addDays, dateKey, getMondayOf } from '../shared/time';
+import { addDays, dateKey, formatTime, getMondayOf } from '../shared/time';
 
 const WEEKDAYS = [
   'Monday',
@@ -24,12 +24,15 @@ const WEEKDAYS = [
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] as const;
 
 // Static lookup so Tailwind's JIT scanner sees every concrete class.
-// Driving by template literal (`bg-cat-${cat}`) would not work.
+// Driving by template literal (`bg-cat-${cat}-bg`) would not work.
+// We use the dark `*-bg` fills (not the bright accents) — matches
+// the predecessor's Session-block treatment: solid dark tinted
+// background with white text on top, brightness-up on hover.
 const CATEGORY_BG: Record<Session['category'], string> = {
-  animation: 'bg-cat-animation',
-  workflow: 'bg-cat-workflow',
-  cornerman: 'bg-cat-cornerman',
-  break: 'bg-cat-break',
+  animation: 'bg-cat-animation-bg',
+  workflow: 'bg-cat-workflow-bg',
+  cornerman: 'bg-cat-cornerman-bg',
+  break: 'bg-cat-break-bg',
 };
 
 function hourLabel(hour24: number): string {
@@ -43,11 +46,11 @@ const TH_ROW =
   'w-20 border border-border bg-surface px-2 py-1.5 text-right font-normal tabular-nums ' +
   'align-top text-fg-muted';
 const CELL =
-  'border border-border align-top p-0.5 h-12 cursor-pointer transition-colors ' +
+  'border border-border align-top p-1 h-14 cursor-pointer transition-colors ' +
   'hover:bg-white/[0.03]';
 const SESSION_BLOCK_BASE =
-  'group/session flex items-center gap-1.5 px-1.5 py-1 mb-0.5 rounded-md text-white text-xs ' +
-  'cursor-pointer overflow-hidden transition-[filter] hover:brightness-110';
+  'group/session relative flex flex-col gap-0.5 px-2 py-1.5 mb-0.5 rounded-lg text-white ' +
+  'cursor-pointer overflow-hidden transition-[filter] hover:brightness-[1.18]';
 const INLINE_BTN =
   'rounded bg-black/25 px-1.5 py-0.5 leading-tight text-white hover:bg-black/45 ' +
   'transition-colors';
@@ -113,45 +116,56 @@ export function WeekGrid({
                         e.stopPropagation();
                         onSessionClick?.(s);
                       }}
-                      className={`${SESSION_BLOCK_BASE} ${CATEGORY_BG[s.category] ?? 'bg-cat-break'}`}
+                      className={`${SESSION_BLOCK_BASE} ${
+                        CATEGORY_BG[s.category] ?? 'bg-cat-break-bg'
+                      } ${s.done ? 'opacity-55' : ''}`}
                     >
-                      <input
-                        type="checkbox"
-                        aria-label={`Mark ${s.label} done`}
-                        checked={s.done}
-                        onChange={() => onToggleDone?.(s)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="m-0 size-3 cursor-pointer accent-white"
-                      />
-                      <span
-                        className={`flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${
-                          s.done ? 'line-through opacity-65' : ''
-                        }`}
-                      >
-                        {s.label}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={`Duplicate ${s.label}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDuplicate?.(s);
-                        }}
-                        className={INLINE_BTN}
-                      >
-                        ⎘
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Delete ${s.label}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete?.(s);
-                        }}
-                        className={INLINE_BTN}
-                      >
-                        🗑
-                      </button>
+                      <div className="flex items-start gap-1.5">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[10px] leading-tight tabular-nums text-white/55">
+                            {formatTime(s.startMin)} → {formatTime(s.endMin)}
+                          </div>
+                          <div
+                            className={`truncate text-[11px] font-semibold leading-tight ${
+                              s.done ? 'line-through' : ''
+                            }`}
+                          >
+                            {s.label}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover/session:opacity-100">
+                          <input
+                            type="checkbox"
+                            aria-label={`Mark ${s.label} done`}
+                            checked={s.done}
+                            onChange={() => onToggleDone?.(s)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="m-0 size-3 cursor-pointer accent-white"
+                          />
+                          <button
+                            type="button"
+                            aria-label={`Duplicate ${s.label}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDuplicate?.(s);
+                            }}
+                            className={INLINE_BTN}
+                          >
+                            ⎘
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Delete ${s.label}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete?.(s);
+                            }}
+                            className={INLINE_BTN}
+                          >
+                            🗑
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </td>

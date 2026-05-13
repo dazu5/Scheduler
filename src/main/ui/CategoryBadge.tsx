@@ -1,8 +1,10 @@
-// Issue #18 chunk 2 — CategoryBadge primitive.
+// Issue #18 chunk 2 + chunk 7 — CategoryBadge primitive.
 //
-// Displays a Category with its palette color. Used in the Now Panel,
-// Dashboard tiles, and Session list rows. Color comes from the
-// `--color-cat-*` @theme tokens defined in styles.css.
+// "Pill" treatment matching weekly_scheduler.html — a dark
+// category-tinted background with the bright category accent as
+// foreground text, uppercase + letter-spaced for chip-like density.
+// Used in the Now Panel, the Dashboard tiles (slice #11+), and any
+// row that needs a Category label outside a full Session block.
 
 const LABELS = {
   animation: 'Animation',
@@ -19,6 +21,14 @@ export interface CategoryBadgeProps {
   compact?: boolean;
 }
 
+// Static lookups so Tailwind's JIT picks every concrete class up.
+const PILL: Record<CategoryKey, string> = {
+  animation: 'bg-cat-animation-bg text-cat-animation',
+  workflow: 'bg-cat-workflow-bg text-cat-workflow',
+  cornerman: 'bg-cat-cornerman-bg text-cat-cornerman',
+  break: 'bg-cat-break-bg text-cat-break',
+};
+
 const DOT: Record<CategoryKey, string> = {
   animation: 'bg-cat-animation',
   workflow: 'bg-cat-workflow',
@@ -28,14 +38,24 @@ const DOT: Record<CategoryKey, string> = {
 
 export function CategoryBadge({ category, compact = false }: CategoryBadgeProps) {
   const label = LABELS[category];
+
+  if (compact) {
+    return (
+      <span
+        data-category={category}
+        aria-label={`Category: ${label}`}
+        className={`inline-block size-2 rounded-full ${DOT[category]}`}
+      />
+    );
+  }
+
   return (
     <span
       data-category={category}
-      className="inline-flex items-center gap-1.5 text-xs font-medium text-fg"
       aria-label={`Category: ${label}`}
+      className={`inline-flex items-center rounded-lg px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] ${PILL[category]}`}
     >
-      <span className={`inline-block size-2 rounded-full ${DOT[category]}`} aria-hidden="true" />
-      {!compact && <span>{label}</span>}
+      {label}
     </span>
   );
 }
