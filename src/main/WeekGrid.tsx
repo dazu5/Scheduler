@@ -106,6 +106,10 @@ export interface WeekGridProps {
   /** Id of the Session currently containing "now" — drives the red
    *  ring + glow on that block. */
   activeSessionId?: string | null;
+  /** dateKey → reason. Off-Days dim their column, suppress click-to-add,
+   *  hide their day-meta total, and surface a DAY OFF card with the
+   *  reason on hover. */
+  offDays?: ReadonlyMap<string, string>;
   /** Optional override for "now" — when omitted, computed from
    *  `new Date()`. Used by the today-column tint + NOW line + day
    *  meta highlight. */
@@ -115,18 +119,22 @@ export interface WeekGridProps {
   onToggleDone?: (session: Session) => void;
   onDuplicate?: (session: Session) => void;
   onDelete?: (session: Session) => void;
+  /** Fired when the user clicks the day-header off-toggle button. */
+  onToggleDayOff?: (dateKey: string) => void;
 }
 
 export function WeekGrid({
   weekStart = getMondayOf(new Date()),
   sessions = [],
   activeSessionId = null,
+  offDays,
   now = new Date(),
   onCellClick,
   onSessionClick,
   onToggleDone,
   onDuplicate,
   onDelete,
+  onToggleDayOff,
 }: WeekGridProps = {}) {
   const todayKey = dateKey(now);
   const nowMin = now.getHours() * 60 + now.getMinutes();
@@ -141,8 +149,10 @@ export function WeekGrid({
         const d = addDays(weekStart, i);
         const dKey = dateKeys[i];
         const isToday = dKey === todayKey;
-        const dayTotal = dayWorkHours(sessions.filter((s) => s.dateKey === dKey));
-        const headerCls = `${DAY_HEADER_BASE} ${i === 0 ? 'border-l-0' : ''} ${
+        const reason = offDays?.get(dKey);
+        const isOff = reason !== undefined;
+        const dayTotal = isOff ? 0 : dayWorkHours(sessions.filter((s) => s.dateKey === dKey));
+        const headerCls = `group/dayheader ${DAY_HEADER_BASE} ${i === 0 ? 'border-l-0' : ''} ${
           isToday ? DAY_TODAY_UNDERLINE : ''
         }`;
         return (
@@ -150,11 +160,24 @@ export function WeekGrid({
             key={dKey}
             role="columnheader"
             data-today={isToday ? 'true' : undefined}
+            data-off={isOff ? 'true' : undefined}
             className={headerCls}
           >
             <div className={`${DAY_NAME} ${isToday ? 'text-accent' : ''}`}>{short}</div>
             <div className={`${DAY_DATE} ${isToday ? 'text-accent' : ''}`}>{d.getDate()}</div>
-            <div className={DAY_META}>{dayMeta(d, dayTotal)}</div>
+            <div className={DAY_META} title={isOff ? reason : undefined}>
+              {isOff ? 'Off' : dayMeta(d, dayTotal)}
+            </div>
+            {onToggleDayOff && (
+              <button
+                type="button"
+                aria-label={isOff ? `Unmark ${dKey} off` : `Mark ${dKey} off`}
+                onClick={() => onToggleDayOff(dKey)}
+                className="absolute top-1.5 right-1.5 z-[4] rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-bold text-fg-muted opacity-0 transition-opacity hover:bg-border hover:text-fg group-hover/dayheader:opacity-100"
+              >
+                {isOff ? '↺' : '✕'}
+              </button>
+            )}
           </div>
         );
       })}
@@ -177,25 +200,33 @@ export function WeekGrid({
       {/* 7 day-column bodies */}
       {dateKeys.map((dKey) => {
         const isToday = dKey === todayKey;
+        const reason = offDays?.get(dKey);
+        const isOff = reason !== undefined;
         const sessionsForDay = sessions.filter((s) => s.dateKey === dKey);
         return (
           <div
             key={dKey}
             data-day-column={dKey}
-            className={`${DAY_COLUMN_BODY} ${isToday ? 'bg-accent/[0.035]' : ''}`}
-            style={{ height: totalHeight, ...HOUR_LINES_BG }}
+            data-off={isOff ? 'true' : undefined}
+            className={`${DAY_COLUMN_BODY} ${isToday ? 'bg-accent/[0.035]' : ''} ${
+              isOff ? 'opacity-85' : ''
+            }`}
+            style={{ height: totalHeight, ...(isOff ? {} : HOUR_LINES_BG) }}
           >
-            {/* Hour-bucket buttons — invisible, click-to-add + tests */}
-            {HOURS.map((h, i) => (
-              <button
-                key={h}
-                type="button"
-                aria-label={`${dKey} ${hourLabel(h)}`}
-                onClick={() => onCellClick?.(dKey, h)}
-                style={{ top: i * HOUR_PX, height: HOUR_PX }}
-                className={HOUR_BUTTON}
-              />
-            ))}
+            {/* Hour-bucket buttons — disabled on off-Days so the user
+             *  can't accidentally schedule a Session on a Day they've
+             *  marked off. */}
+            {!isOff &&
+              HOURS.map((h, i) => (
+                <button
+                  key={h}
+                  type="button"
+                  aria-label={`${dKey} ${hourLabel(h)}`}
+                  onClick={() => onCellClick?.(dKey, h)}
+                  style={{ top: i * HOUR_PX, height: HOUR_PX }}
+                  className={HOUR_BUTTON}
+                />
+              ))}
 
             {sessionsForDay.map((s) => (
               <SessionBlock
@@ -208,6 +239,8 @@ export function WeekGrid({
                 onDelete={onDelete}
               />
             ))}
+
+            {isOff && <DayOffCard reason={reason} />}
 
             {isToday && nowMin >= START_HOUR * 60 && nowMin < END_HOUR * 60 && (
               <NowLine top={minToPx(nowMin)} />
@@ -316,6 +349,22 @@ function SessionBlock({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function DayOffCard({ reason }: { reason: string }) {
+  return (
+    <div
+      data-testid="day-off-card"
+      title={reason}
+      className="-translate-y-1/2 absolute top-1/2 right-3 left-3 rounded-[10px] border border-border-strong border-dashed bg-surface-2 px-4 py-4 text-center"
+    >
+      <div className="mb-1.5 text-[24px] leading-none">🌙</div>
+      <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.07em] text-fg-muted">
+        Day Off
+      </div>
+      <div className="truncate text-[11px] text-fg">{reason}</div>
     </div>
   );
 }

@@ -8,14 +8,18 @@ import {
   deleteSession,
   duplicateSession,
   hasOnboarded,
+  listOffDays,
   listSessions,
+  markDayOff,
   redoCommand,
   setOnboarded,
   toggleDone,
   undoCommand,
+  unmarkDayOff,
   updateSession,
 } from '../shared/ipc';
 import { addDays, dateKey, getMondayOf } from '../shared/time';
+import { DayOffModal } from './DayOffModal';
 import { Header } from './Header';
 import { NowPanel } from './NowPanel';
 import { type OnboardingCompleteResult, OnboardingModal } from './OnboardingModal';
@@ -58,6 +62,12 @@ function AppInner() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [weekStart, setWeekStart] = useState<Date>(() => getMondayOf(new Date()));
   const [onboarding, setOnboarding] = useState<OnboardingReason | null>(null);
+  // Map<dateKey, reason> for the visible week. Refreshed alongside
+  // sessions whenever weekStart changes or a mutation fires.
+  const [offDays, setOffDays] = useState<Map<string, string>>(() => new Map());
+  // The dateKey currently being marked/unmarked off via the modal,
+  // or null when the modal is closed.
+  const [markingDayOff, setMarkingDayOff] = useState<string | null>(null);
   const toast = useToast();
   // Single tick subscription for the app — the live "active" Session
   // id flows down to both <NowPanel /> and <WeekGrid /> so they
@@ -66,11 +76,16 @@ function AppInner() {
   const activeSessionId = tick.active?.id ?? null;
 
   const refresh = useCallback(async () => {
-    const fresh = await listSessions({
+    const range = {
       start: dateKey(weekStart),
       end: dateKey(addDays(weekStart, 6)),
-    });
-    setSessions(fresh);
+    };
+    const [freshSessions, freshOffDays] = await Promise.all([
+      listSessions(range),
+      listOffDays(range),
+    ]);
+    setSessions(freshSessions);
+    setOffDays(new Map(freshOffDays.map((o) => [o.dateKey, o.reason])));
   }, [weekStart]);
 
   useEffect(() => {
@@ -219,6 +234,40 @@ function AppInner() {
   useKeyboardShortcut('z', handleRedo, { ctrl: true, shift: true });
   useKeyboardShortcut('y', handleRedo, { ctrl: true });
 
+  // -----------------------------------------------------------------
+  // Slice 6 — Off-Days
+  // -----------------------------------------------------------------
+  const handleToggleDayOff = useCallback((dKey: string) => {
+    setMarkingDayOff(dKey);
+  }, []);
+
+  const handleConfirmDayOff = useCallback(
+    async (reason: string) => {
+      if (!markingDayOff) return;
+      try {
+        await markDayOff(markingDayOff, reason);
+        toast.success(`Marked ${markingDayOff} off`);
+        setMarkingDayOff(null);
+        await refresh();
+      } catch (err) {
+        toast.error(`Couldn't mark day off: ${(err as Error).message ?? 'unknown error'}`);
+      }
+    },
+    [markingDayOff, refresh, toast],
+  );
+
+  const handleUnmarkDayOff = useCallback(async () => {
+    if (!markingDayOff) return;
+    try {
+      await unmarkDayOff(markingDayOff);
+      toast.success(`Restored ${markingDayOff}`);
+      setMarkingDayOff(null);
+      await refresh();
+    } catch (err) {
+      toast.error(`Couldn't unmark day: ${(err as Error).message ?? 'unknown error'}`);
+    }
+  }, [markingDayOff, refresh, toast]);
+
   return (
     <div className="flex h-full min-h-screen flex-col bg-bg text-fg">
       <Header
@@ -234,6 +283,8 @@ function AppInner() {
           weekStart={weekStart}
           sessions={sessions}
           activeSessionId={activeSessionId}
+          offDays={offDays}
+          onToggleDayOff={handleToggleDayOff}
           onCellClick={(dKey, hour) => {
             setEditing({ dateKey: dKey, hour, session: null });
           }}
@@ -261,6 +312,16 @@ function AppInner() {
         />
       )}
       {onboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
+      {markingDayOff && (
+        <DayOffModal
+          dateKey={markingDayOff}
+          initialReason={offDays.get(markingDayOff) ?? ''}
+          alreadyOff={offDays.has(markingDayOff)}
+          onConfirm={handleConfirmDayOff}
+          onUnmark={handleUnmarkDayOff}
+          onCancel={() => setMarkingDayOff(null)}
+        />
+      )}
     </div>
   );
 }

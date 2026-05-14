@@ -7,5 +7,6 @@
 
 pub mod db;
 pub mod migration;
+pub mod off_days;
 pub mod session_store;
 pub mod undo_stack;

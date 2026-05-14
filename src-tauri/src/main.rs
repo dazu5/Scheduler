@@ -10,6 +10,7 @@ use std::sync::Mutex;
 
 use rusqlite::Connection;
 use scheduler::migration::{self, ImportSummary};
+use scheduler::off_days::{self, OffDay};
 use scheduler::session_store::{self, Session, SessionInput, UpdateSessionInput};
 use scheduler::undo_stack::{self, UndoStack};
 use tauri::{Manager, State};
@@ -111,6 +112,24 @@ fn set_onboarded(state: State<DbState>, value: bool) -> Result<(), String> {
     migration::set_onboarded(&conn, value).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn mark_day_off(state: State<DbState>, date_key: String, reason: String) -> Result<(), String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    off_days::mark_day_off(&conn, &date_key, &reason).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn unmark_day_off(state: State<DbState>, date_key: String) -> Result<(), String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    off_days::unmark_day_off(&conn, &date_key).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_off_days(state: State<DbState>, start: String, end: String) -> Result<Vec<OffDay>, String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    off_days::list_off_days(&conn, &start, &end).map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -141,6 +160,9 @@ fn main() {
             import_json_from_path,
             has_onboarded,
             set_onboarded,
+            mark_day_off,
+            unmark_day_off,
+            list_off_days,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -170,3 +170,28 @@ export function undoCommand(): Promise<string | null> {
 export function redoCommand(): Promise<string | null> {
   return invoke<string | null>('redo');
 }
+
+/** A row from the `off_days` table. */
+export interface OffDay {
+  dateKey: string;
+  reason: string;
+  createdAt: number;
+}
+
+/** Mark `dateKey` as an off-Day with the given reason. Idempotent —
+ *  re-marking an already-off Day updates the reason in place. */
+export function markDayOff(dateKey: string, reason: string): Promise<void> {
+  return invoke<void>('mark_day_off', { dateKey, reason });
+}
+
+/** Unmark `dateKey`. Idempotent — unmarking a Day that wasn't off
+ *  is a no-op. */
+export function unmarkDayOff(dateKey: string): Promise<void> {
+  return invoke<void>('unmark_day_off', { dateKey });
+}
+
+/** Return every off-Day with `dateKey` in `[start, end]` inclusive,
+ *  sorted by `dateKey`. */
+export function listOffDays(range: { start: string; end: string }): Promise<OffDay[]> {
+  return invoke<OffDay[]>('list_off_days', range);
+}

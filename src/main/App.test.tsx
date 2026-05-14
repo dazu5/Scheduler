@@ -19,6 +19,9 @@ vi.mock('../shared/ipc', () => ({
   hasOnboarded: vi.fn(),
   setOnboarded: vi.fn(),
   importJsonFromPath: vi.fn(),
+  listOffDays: vi.fn(),
+  markDayOff: vi.fn(),
+  unmarkDayOff: vi.fn(),
 }));
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
@@ -33,11 +36,14 @@ import {
   duplicateSession,
   hasOnboarded,
   importJsonFromPath,
+  listOffDays,
   listSessions,
+  markDayOff,
   redoCommand,
   setOnboarded,
   toggleDone,
   undoCommand,
+  unmarkDayOff,
   updateSession,
 } from '../shared/ipc';
 import { App } from './App';
@@ -75,6 +81,9 @@ describe('<App />', () => {
     vi.mocked(hasOnboarded).mockReset().mockResolvedValue(true);
     vi.mocked(setOnboarded).mockReset().mockResolvedValue(undefined);
     vi.mocked(importJsonFromPath).mockReset().mockResolvedValue({ sessions: 0, offDays: 0 });
+    vi.mocked(listOffDays).mockReset().mockResolvedValue([]);
+    vi.mocked(markDayOff).mockReset().mockResolvedValue(undefined);
+    vi.mocked(unmarkDayOff).mockReset().mockResolvedValue(undefined);
     vi.mocked(open).mockReset();
   });
 
