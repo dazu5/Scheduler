@@ -22,6 +22,13 @@ vi.mock('../shared/ipc', () => ({
   listOffDays: vi.fn(),
   markDayOff: vi.fn(),
   unmarkDayOff: vi.fn(),
+  exportToPath: vi.fn(),
+  showPill: vi.fn(),
+  hidePill: vi.fn(),
+  tickKeystroke: vi.fn(),
+  tickClick: vi.fn(),
+  getActivityCounts: vi.fn(),
+  resetActivityCounts: vi.fn(),
 }));
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
@@ -34,6 +41,7 @@ import {
   addSession,
   deleteSession,
   duplicateSession,
+  getActivityCounts,
   hasOnboarded,
   importJsonFromPath,
   listOffDays,
@@ -41,6 +49,8 @@ import {
   markDayOff,
   redoCommand,
   setOnboarded,
+  tickClick,
+  tickKeystroke,
   toggleDone,
   undoCommand,
   unmarkDayOff,
@@ -84,6 +94,15 @@ describe('<App />', () => {
     vi.mocked(listOffDays).mockReset().mockResolvedValue([]);
     vi.mocked(markDayOff).mockReset().mockResolvedValue(undefined);
     vi.mocked(unmarkDayOff).mockReset().mockResolvedValue(undefined);
+    vi.mocked(getActivityCounts)
+      .mockReset()
+      .mockResolvedValue({ dateKey: '2026-05-14', keystrokes: 0, clicks: 0 });
+    // The useActivityTracker hook attaches document.keydown / mousedown
+    // listeners that fire tickKeystroke / tickClick on every event.
+    // Several tests dispatch synthetic key events; if these mocks
+    // returned undefined, the hook's `.catch()` would crash.
+    vi.mocked(tickKeystroke).mockReset().mockResolvedValue(undefined);
+    vi.mocked(tickClick).mockReset().mockResolvedValue(undefined);
     vi.mocked(open).mockReset();
   });
 

@@ -9,6 +9,7 @@
 use std::sync::Mutex;
 
 use rusqlite::Connection;
+use scheduler::activity::{self, ActivityCounts, ActivityState};
 use scheduler::migration::{self, ImportSummary};
 use scheduler::off_days::{self, OffDay};
 use scheduler::session_store::{self, Session, SessionInput, UpdateSessionInput};
@@ -172,6 +173,38 @@ fn focus_main_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+// -----------------------------------------------------------------
+// Slice 11 — Activity tracker (counts only)
+//
+// Frontend hooks into `keydown` / `mousedown` and calls these every
+// time. The Rust-side OS-level rdev hook is a follow-up; the
+// privacy contract (counts only, never content) is asserted by
+// `activity::tests::serialized_shape_carries_only_counts_and_date_key`.
+// -----------------------------------------------------------------
+
+#[tauri::command]
+fn tick_keystroke(state: State<ActivityState>, date_key: String) -> Result<(), String> {
+    activity::tick_keystroke(state.inner(), &date_key);
+    Ok(())
+}
+
+#[tauri::command]
+fn tick_click(state: State<ActivityState>, date_key: String) -> Result<(), String> {
+    activity::tick_click(state.inner(), &date_key);
+    Ok(())
+}
+
+#[tauri::command]
+fn get_activity_counts(state: State<ActivityState>, date_key: String) -> Result<ActivityCounts, String> {
+    Ok(activity::get_counts(state.inner(), &date_key))
+}
+
+#[tauri::command]
+fn reset_activity_counts(state: State<ActivityState>, date_key: String) -> Result<(), String> {
+    activity::reset_counts(state.inner(), &date_key);
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -188,6 +221,7 @@ fn main() {
 
             app.manage(DbState(Mutex::new(conn)));
             app.manage(UndoState(Mutex::new(UndoStack::new())));
+            app.manage(ActivityState::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -209,6 +243,10 @@ fn main() {
             show_pill,
             hide_pill,
             focus_main_window,
+            tick_keystroke,
+            tick_click,
+            get_activity_counts,
+            reset_activity_counts,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

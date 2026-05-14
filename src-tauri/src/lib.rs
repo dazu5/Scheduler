@@ -5,6 +5,7 @@
 //! tray, pill window, tick task, and activity tracker are introduced
 //! in later slices.
 
+pub mod activity;
 pub mod db;
 pub mod migration;
 pub mod off_days;

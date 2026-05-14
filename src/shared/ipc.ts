@@ -212,3 +212,29 @@ export function showPill(): Promise<void> {
 export function hidePill(): Promise<void> {
   return invoke<void>('hide_pill');
 }
+
+/** Per-Day activity counts. Issue #11 privacy contract: counts only —
+ *  no key identity, no clipboard, no app/window/URL, no screenshots.
+ *  The Rust pinning test asserts the serde-rendered shape contains
+ *  exactly these three fields. */
+export interface ActivityCounts {
+  dateKey: string;
+  keystrokes: number;
+  clicks: number;
+}
+
+export function tickKeystroke(dateKey: string): Promise<void> {
+  return invoke<void>('tick_keystroke', { dateKey });
+}
+
+export function tickClick(dateKey: string): Promise<void> {
+  return invoke<void>('tick_click', { dateKey });
+}
+
+export function getActivityCounts(dateKey: string): Promise<ActivityCounts> {
+  return invoke<ActivityCounts>('get_activity_counts', { dateKey });
+}
+
+export function resetActivityCounts(dateKey: string): Promise<void> {
+  return invoke<void>('reset_activity_counts', { dateKey });
+}

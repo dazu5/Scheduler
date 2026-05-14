@@ -38,6 +38,10 @@ export interface HeaderProps {
   onExportJson?: () => void;
   /** Issue #9 — toggle the always-on-top pill window. */
   onTogglePill?: () => void;
+  /** Issue #11 — today's activity counts (keystrokes + clicks).
+   *  Displayed in a tooltip on hover of a 🔔 button. Counts only,
+   *  privacy-pinned. */
+  activity?: { keystrokes: number; clicks: number };
 }
 
 export function Header({
@@ -49,6 +53,7 @@ export function Header({
   onExportCsv,
   onExportJson,
   onTogglePill,
+  activity,
 }: HeaderProps) {
   useKeyboardShortcut('ArrowLeft', onPrevWeek);
   useKeyboardShortcut('ArrowRight', onNextWeek);
@@ -82,6 +87,18 @@ export function Header({
           <Button variant="ghost" size="sm" onClick={onExportJson} aria-label="Export JSON">
             JSON
           </Button>
+        )}
+        {activity && (
+          <span
+            data-testid="activity-bell"
+            title={`Today: ${activity.keystrokes} keystrokes · ${activity.clicks} clicks`}
+            className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium text-warn"
+          >
+            🔔
+            <span className="tabular-nums text-fg-muted">
+              {activity.keystrokes + activity.clicks}
+            </span>
+          </span>
         )}
         {onTogglePill && (
           <Button variant="ghost" size="sm" onClick={onTogglePill} aria-label="Toggle pill">
