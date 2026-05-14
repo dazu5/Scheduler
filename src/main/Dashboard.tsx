@@ -84,7 +84,7 @@ export function Dashboard({ weekStart, sessions, offDays, now = new Date() }: Da
     <section
       aria-label="Pace dashboard"
       data-testid="dashboard"
-      className="grid grid-cols-1 gap-2 md:grid-cols-4"
+      className="grid grid-cols-1 gap-3 md:grid-cols-4"
     >
       {WORK_CATEGORIES.map((cat) => {
         const info = CATEGORY_INFO[cat];

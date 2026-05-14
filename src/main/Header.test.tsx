@@ -18,9 +18,9 @@ function setup(overrides: Partial<React.ComponentProps<typeof Header>> = {}) {
 }
 
 describe('<Header />', () => {
-  it('renders the app title', () => {
+  it('renders the app title with the colored "Work Scheduler" accent', () => {
     setup();
-    expect(screen.getByRole('heading', { name: 'Scheduler' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /weekly work scheduler/i })).toBeInTheDocument();
   });
 
   it('shows the week date range', () => {
@@ -30,9 +30,9 @@ describe('<Header />', () => {
     expect(screen.getByTestId('week-range')).toHaveTextContent(/2026/);
   });
 
-  it('calls onPrevWeek when the ← button is clicked', () => {
+  it('calls onPrevWeek when the prev-week button is clicked', () => {
     const { onPrevWeek } = setup();
-    fireEvent.click(screen.getByRole('button', { name: 'Previous week' }));
+    fireEvent.click(screen.getByRole('button', { name: /previous week/i }));
     expect(onPrevWeek).toHaveBeenCalledTimes(1);
   });
 

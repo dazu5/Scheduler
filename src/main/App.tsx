@@ -31,7 +31,6 @@ import { NowPanel } from './NowPanel';
 import { type OnboardingCompleteResult, OnboardingModal } from './OnboardingModal';
 import { SessionEditor } from './SessionEditor';
 import { WeekGrid } from './WeekGrid';
-import { useActivityTracker } from './hooks/useActivityTracker';
 import { useKeyboardShortcut } from './hooks/useKeyboardShortcut';
 import { useTick } from './hooks/useTick';
 import { ToastProvider, useToast } from './ui';
@@ -81,7 +80,6 @@ function AppInner() {
   // re-render in the same frame when a Session starts/ends.
   const tick = useTick(sessions);
   const activeSessionId = tick.active?.id ?? null;
-  const { counts: activityCounts } = useActivityTracker();
 
   const refresh = useCallback(async () => {
     const range = {
@@ -334,7 +332,8 @@ function AppInner() {
         onExportCsv={handleExportCsv}
         onExportJson={handleExportJson}
         onTogglePill={handleTogglePill}
-        activity={activityCounts}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
       />
       <main className="flex flex-1 flex-col gap-4 px-4 py-4">
         <NowPanel sessions={sessions} tick={tick} />

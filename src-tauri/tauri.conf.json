@@ -24,6 +24,8 @@
         "url": "pill.html",
         "width": 260,
         "height": 60,
+        "x": 1620,
+        "y": 980,
         "resizable": false,
         "decorations": false,
         "alwaysOnTop": true,

@@ -327,11 +327,11 @@ describe('<App />', () => {
     await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(2));
   });
 
-  it('Header exposes a "Settings" button that re-opens the import modal', async () => {
+  it('Header exposes an "Import" button that re-opens the import modal', async () => {
     render(<App />);
     await waitFor(() => expect(listSessions).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /import data/i }));
 
     expect(
       screen.getByRole('dialog', { name: /import from weekly_scheduler\.html/i }),
@@ -342,7 +342,7 @@ describe('<App />', () => {
     render(<App />);
     await waitFor(() => expect(listSessions).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /import data/i }));
     fireEvent.click(screen.getByRole('button', { name: /skip/i }));
 
     // The Settings re-open path closes the modal without writing the
