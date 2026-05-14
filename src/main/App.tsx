@@ -1,4 +1,6 @@
+import { save } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useState } from 'react';
+import { toCsv, toJson } from '../shared/export';
 import {
   type OvernightSpill,
   type Session,
@@ -7,6 +9,7 @@ import {
   addSession,
   deleteSession,
   duplicateSession,
+  exportToPath,
   hasOnboarded,
   listOffDays,
   listSessions,
@@ -19,6 +22,7 @@ import {
   updateSession,
 } from '../shared/ipc';
 import { addDays, dateKey, getMondayOf } from '../shared/time';
+import { Dashboard } from './Dashboard';
 import { DayOffModal } from './DayOffModal';
 import { Header } from './Header';
 import { NowPanel } from './NowPanel';
@@ -268,6 +272,35 @@ function AppInner() {
     }
   }, [markingDayOff, refresh, toast]);
 
+  // -----------------------------------------------------------------
+  // Slice 12 — CSV / JSON export
+  // -----------------------------------------------------------------
+  const handleExport = useCallback(
+    async (format: 'csv' | 'json') => {
+      const weekKey = dateKey(weekStart);
+      const defaultName = `scheduler-${weekKey}.${format}`;
+      try {
+        const path = await save({
+          defaultPath: defaultName,
+          filters: [
+            format === 'csv'
+              ? { name: 'CSV', extensions: ['csv'] }
+              : { name: 'JSON', extensions: ['json'] },
+          ],
+        });
+        if (!path) return; // user cancelled
+        const content = format === 'csv' ? toCsv(sessions) : toJson(sessions);
+        await exportToPath(path, content);
+        toast.success(`Exported ${sessions.length} Sessions`);
+      } catch (err) {
+        toast.error(`Export failed: ${(err as Error).message ?? 'unknown error'}`);
+      }
+    },
+    [sessions, toast, weekStart],
+  );
+  const handleExportCsv = useCallback(() => handleExport('csv'), [handleExport]);
+  const handleExportJson = useCallback(() => handleExport('json'), [handleExport]);
+
   return (
     <div className="flex h-full min-h-screen flex-col bg-bg text-fg">
       <Header
@@ -276,9 +309,12 @@ function AppInner() {
         onNextWeek={handleNextWeek}
         onToday={handleToday}
         onOpenSettings={handleOpenSettings}
+        onExportCsv={handleExportCsv}
+        onExportJson={handleExportJson}
       />
       <main className="flex flex-1 flex-col gap-4 px-4 py-4">
         <NowPanel sessions={sessions} tick={tick} />
+        <Dashboard weekStart={weekStart} sessions={sessions} offDays={offDays} />
         <WeekGrid
           weekStart={weekStart}
           sessions={sessions}

@@ -31,6 +31,11 @@ export interface HeaderProps {
    *  a later slice. Optional so tests/stories that don't care can
    *  omit it. */
   onOpenSettings?: () => void;
+  /** Issue #13 — CSV export of the visible week. Optional so tests
+   *  that don't need the export surface can skip wiring. */
+  onExportCsv?: () => void;
+  /** Issue #13 — JSON export of the visible week. */
+  onExportJson?: () => void;
 }
 
 export function Header({
@@ -39,6 +44,8 @@ export function Header({
   onNextWeek,
   onToday,
   onOpenSettings,
+  onExportCsv,
+  onExportJson,
 }: HeaderProps) {
   useKeyboardShortcut('ArrowLeft', onPrevWeek);
   useKeyboardShortcut('ArrowRight', onNextWeek);
@@ -63,6 +70,16 @@ export function Header({
         >
           {formatWeekRange(weekStart)}
         </span>
+        {onExportCsv && (
+          <Button variant="ghost" size="sm" onClick={onExportCsv} aria-label="Export CSV">
+            CSV
+          </Button>
+        )}
+        {onExportJson && (
+          <Button variant="ghost" size="sm" onClick={onExportJson} aria-label="Export JSON">
+            JSON
+          </Button>
+        )}
         {onOpenSettings && (
           <Button variant="secondary" size="sm" onClick={onOpenSettings} aria-label="Settings">
             Settings

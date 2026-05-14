@@ -195,3 +195,10 @@ export function unmarkDayOff(dateKey: string): Promise<void> {
 export function listOffDays(range: { start: string; end: string }): Promise<OffDay[]> {
   return invoke<OffDay[]>('list_off_days', range);
 }
+
+/** Write `content` to `path` (UTF-8). Used by CSV / JSON export.
+ *  Caller is responsible for opening the save dialog (plugin-dialog
+ *  `save()`) and passing the chosen path here. */
+export function exportToPath(path: string, content: string): Promise<void> {
+  return invoke<void>('export_to_path', { path, content });
+}

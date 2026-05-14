@@ -130,6 +130,16 @@ fn list_off_days(state: State<DbState>, start: String, end: String) -> Result<Ve
     off_days::list_off_days(&conn, &start, &end).map_err(|e| e.to_string())
 }
 
+/// Write `content` to `path` UTF-8. Used by the CSV / JSON export
+/// buttons; the frontend opens a save dialog via plugin-dialog and
+/// hands the chosen path here. Kept dumb on purpose — no validation
+/// beyond "the OS can open it for write" so the user can target any
+/// location they like.
+#[tauri::command]
+fn export_to_path(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, content).map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -163,6 +173,7 @@ fn main() {
             mark_day_off,
             unmark_day_off,
             list_off_days,
+            export_to_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
