@@ -113,9 +113,11 @@ describe('<WeekGrid />', () => {
     // visible window.
     expect(oneHour.style.top).toBe('80px');
     expect(fourHour.style.top).toBe('80px');
-    // The 4-hour Session is 4× as tall as the 1-hour Session.
-    expect(oneHour.style.height).toBe('80px');
-    expect(fourHour.style.height).toBe('320px');
+    // Heights subtract the 3px SESSION_GAP so back-to-back Sessions
+    // render with a small visible separation. The 4-hour Session is
+    // still ~4× as tall as the 1-hour Session.
+    expect(oneHour.style.height).toBe('77px');
+    expect(fourHour.style.height).toBe('317px');
   });
 
   it('calls onSessionClick (not onCellClick) when a Session block is clicked', () => {

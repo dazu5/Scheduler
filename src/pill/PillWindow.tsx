@@ -1,19 +1,18 @@
 // Issue #9 — Pill window.
 //
 // A 260×60 frameless always-on-top monitor that mirrors the main
-// window's "Active / Next" view in a tiny, glanceable form. Reads
-// from Tauri's `timer:tick` event and from `list_sessions` for the
-// current day so the pill works whether or not the main window is
-// open.
+// window's "Active / Next" view. Reads from Tauri's `timer:tick` and
+// from `list_sessions` for the current day.
 //
-// Drag handling: the outer body has `data-tauri-drag-region` so the
-// user can drag the pill anywhere on screen by clicking-and-holding
-// any non-button area. The "Open" button at the right edge has
-// `data-tauri-drag-region="false"` so clicking it focuses the main
-// window instead of starting a drag.
+// Drag handling: `data-tauri-drag-region` proved unreliable on Windows
+// in our testing, so the pill body uses the explicit
+// `getCurrentWindow().startDragging()` API on mousedown. The "Open"
+// button at the right edge stops propagation so clicking it focuses
+// the main window instead of starting a drag.
 
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useEffect, useState } from 'react';
 import type { Session, TimerTick } from './shared-pill';
 import { dateKey, formatTime } from './shared-pill';
@@ -76,6 +75,16 @@ export function PillWindow() {
       /* main may have been closed — silent */
     });
 
+  // Start dragging the window on left-mousedown anywhere except a
+  // button. Tauri's startDragging() takes over the drag interaction;
+  // mouseup ends it implicitly when the OS finishes the drag.
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) return;
+    void getCurrentWindow().startDragging();
+  };
+
   const { active, next, nowMin } = tick;
   const remaining = active ? active.endMin - nowMin : 0;
   const remainingHrs = Math.floor(remaining / 60);
@@ -88,76 +97,48 @@ export function PillWindow() {
       : '';
 
   return (
-    // The whole body is a drag region. The `Open` button below
-    // overrides this so it can fire onClick instead of starting a
-    // window drag.
     <div
-      data-tauri-drag-region
       data-testid="pill"
-      className="flex h-full w-full items-center gap-2.5 bg-surface px-3 text-fg"
+      onMouseDown={handleMouseDown}
+      className="flex h-full w-full select-none items-center gap-2.5 bg-surface px-3 text-fg"
       style={{ cursor: 'grab' }}
     >
       {active ? (
         <>
           <span
-            data-tauri-drag-region
             className={`size-2 shrink-0 animate-pulse-dot rounded-full ${
               CATEGORY_ACCENT[active.category] ?? 'bg-cat-break'
             }`}
             aria-hidden="true"
           />
-          <div data-tauri-drag-region className="min-w-0 flex-1">
-            <div
-              data-tauri-drag-region
-              className="truncate text-[12px] font-semibold leading-tight text-fg"
-            >
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[12px] font-semibold leading-tight text-fg">
               {active.label}
             </div>
-            <div data-tauri-drag-region className="text-[10px] tabular-nums text-fg-muted">
+            <div className="text-[10px] tabular-nums text-fg-muted">
               {formatTime(active.endMin)} · {remainingText} left
             </div>
           </div>
         </>
       ) : next ? (
         <>
-          <span
-            data-tauri-drag-region
-            className="size-2 shrink-0 rounded-full bg-accent"
-            aria-hidden="true"
-          />
-          <div data-tauri-drag-region className="min-w-0 flex-1">
-            <div
-              data-tauri-drag-region
-              className="text-[10px] uppercase tracking-wider text-fg-muted"
-            >
-              Next
-            </div>
-            <div
-              data-tauri-drag-region
-              className="truncate text-[12px] font-semibold leading-tight text-fg"
-            >
+          <span className="size-2 shrink-0 rounded-full bg-accent" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] uppercase tracking-wider text-fg-muted">Next</div>
+            <div className="truncate text-[12px] font-semibold leading-tight text-fg">
               {next.label} · {formatTime(next.startMin)}
             </div>
           </div>
         </>
       ) : (
         <>
-          <span
-            data-tauri-drag-region
-            className="size-2 shrink-0 rounded-full bg-fg-muted-2"
-            aria-hidden="true"
-          />
-          <span data-tauri-drag-region className="text-[12px] italic text-fg-muted">
-            Idle
-          </span>
+          <span className="size-2 shrink-0 rounded-full bg-fg-muted-2" aria-hidden="true" />
+          <span className="text-[12px] italic text-fg-muted">Idle</span>
         </>
       )}
       <button
         type="button"
         onClick={focusMain}
-        // The button is NOT a drag region — clicks here focus the
-        // main window instead of starting a window drag.
-        data-tauri-drag-region="false"
         className="shrink-0 cursor-pointer rounded bg-surface-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-fg-muted hover:bg-border hover:text-fg"
       >
         Open

@@ -63,9 +63,16 @@ function minToPx(min: number): number {
   return Math.max(0, (min - START_HOUR * 60) * (HOUR_PX / 60));
 }
 
+/** Sessions extending past the visible window clip to the bottom of
+ *  the column rather than overflowing into next-day space. Subtract
+ *  `SESSION_GAP` so back-to-back Sessions render with a small visible
+ *  gap instead of touching pixel-perfectly — matches the predecessor's
+ *  spacing where every Session has a couple of pixels of breathing
+ *  room beneath it. */
+const SESSION_GAP = 3;
 function clampHeight(top: number, raw: number): number {
   const totalPx = HOUR_COUNT * HOUR_PX;
-  return Math.min(raw, totalPx - top);
+  return Math.max(0, Math.min(raw, totalPx - top) - SESSION_GAP);
 }
 
 function dayMeta(d: Date, hours: number): string {
