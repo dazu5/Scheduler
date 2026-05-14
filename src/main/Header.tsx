@@ -36,6 +36,8 @@ export interface HeaderProps {
   onExportCsv?: () => void;
   /** Issue #13 — JSON export of the visible week. */
   onExportJson?: () => void;
+  /** Issue #9 — toggle the always-on-top pill window. */
+  onTogglePill?: () => void;
 }
 
 export function Header({
@@ -46,6 +48,7 @@ export function Header({
   onOpenSettings,
   onExportCsv,
   onExportJson,
+  onTogglePill,
 }: HeaderProps) {
   useKeyboardShortcut('ArrowLeft', onPrevWeek);
   useKeyboardShortcut('ArrowRight', onNextWeek);
@@ -78,6 +81,11 @@ export function Header({
         {onExportJson && (
           <Button variant="ghost" size="sm" onClick={onExportJson} aria-label="Export JSON">
             JSON
+          </Button>
+        )}
+        {onTogglePill && (
+          <Button variant="ghost" size="sm" onClick={onTogglePill} aria-label="Toggle pill">
+            ⊙
           </Button>
         )}
         {onOpenSettings && (

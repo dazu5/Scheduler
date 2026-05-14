@@ -140,6 +140,38 @@ fn export_to_path(path: String, content: String) -> Result<(), String> {
     std::fs::write(&path, content).map_err(|e| e.to_string())
 }
 
+/// Show the always-on-top pill window — issue #9. The window is
+/// pre-created (and hidden) by tauri.conf.json, so we just have to
+/// flip its visibility.
+#[tauri::command]
+fn show_pill(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("pill") {
+        w.show().map_err(|e| e.to_string())?;
+        w.set_always_on_top(true).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Hide the pill window. Idempotent — calling on an already-hidden
+/// window is a no-op.
+#[tauri::command]
+fn hide_pill(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("pill") {
+        w.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Bring the main window to the foreground from the pill click.
+#[tauri::command]
+fn focus_main_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("main") {
+        w.show().map_err(|e| e.to_string())?;
+        w.set_focus().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -174,6 +206,9 @@ fn main() {
             unmark_day_off,
             list_off_days,
             export_to_path,
+            show_pill,
+            hide_pill,
+            focus_main_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

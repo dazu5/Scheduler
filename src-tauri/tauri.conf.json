@@ -17,6 +17,19 @@
         "width": 1200,
         "height": 800,
         "resizable": true
+      },
+      {
+        "label": "pill",
+        "title": "Scheduler Pill",
+        "url": "pill.html",
+        "width": 260,
+        "height": 60,
+        "resizable": false,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "transparent": false,
+        "visible": false
       }
     ],
     "security": {

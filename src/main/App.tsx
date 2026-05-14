@@ -11,11 +11,13 @@ import {
   duplicateSession,
   exportToPath,
   hasOnboarded,
+  hidePill,
   listOffDays,
   listSessions,
   markDayOff,
   redoCommand,
   setOnboarded,
+  showPill,
   toggleDone,
   undoCommand,
   unmarkDayOff,
@@ -301,6 +303,24 @@ function AppInner() {
   const handleExportCsv = useCallback(() => handleExport('csv'), [handleExport]);
   const handleExportJson = useCallback(() => handleExport('json'), [handleExport]);
 
+  // -----------------------------------------------------------------
+  // Slice 8 — Pill window toggle
+  // -----------------------------------------------------------------
+  const [pillVisible, setPillVisible] = useState(false);
+  const handleTogglePill = useCallback(async () => {
+    try {
+      if (pillVisible) {
+        await hidePill();
+        setPillVisible(false);
+      } else {
+        await showPill();
+        setPillVisible(true);
+      }
+    } catch (err) {
+      toast.error(`Pill toggle failed: ${(err as Error).message ?? 'unknown error'}`);
+    }
+  }, [pillVisible, toast]);
+
   return (
     <div className="flex h-full min-h-screen flex-col bg-bg text-fg">
       <Header
@@ -311,6 +331,7 @@ function AppInner() {
         onOpenSettings={handleOpenSettings}
         onExportCsv={handleExportCsv}
         onExportJson={handleExportJson}
+        onTogglePill={handleTogglePill}
       />
       <main className="flex flex-1 flex-col gap-4 px-4 py-4">
         <NowPanel sessions={sessions} tick={tick} />

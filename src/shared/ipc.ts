@@ -202,3 +202,13 @@ export function listOffDays(range: { start: string; end: string }): Promise<OffD
 export function exportToPath(path: string, content: string): Promise<void> {
   return invoke<void>('export_to_path', { path, content });
 }
+
+/** Show the always-on-top pill window (issue #9). */
+export function showPill(): Promise<void> {
+  return invoke<void>('show_pill');
+}
+
+/** Hide the pill window. Idempotent. */
+export function hidePill(): Promise<void> {
+  return invoke<void>('hide_pill');
+}
