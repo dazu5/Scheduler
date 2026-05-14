@@ -33,18 +33,14 @@ function mkSession(overrides: Partial<Session> = {}): Session {
 }
 
 describe('<WeekGrid />', () => {
-  it('renders 7 column headers, Monday through Sunday in that order', () => {
-    render(<WeekGrid />);
+  it('renders 7 day-column headers, MON through SUN in that order', () => {
+    render(<WeekGrid weekStart={new Date(2025, 0, 13)} />);
     const headers = screen.getAllByRole('columnheader');
-    expect(headers.map((h) => h.textContent?.trim())).toEqual([
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ]);
+    // Each header stacks the weekday short, the date, and the
+    // day-meta line — assert just the leading weekday short here so
+    // the test stays robust to the rest of the header content.
+    const shorts = headers.map((h) => h.textContent?.trim().slice(0, 3));
+    expect(shorts).toEqual(['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']);
   });
 
   it('renders 12 hour-label rows covering the 8 AM–8 PM working window', () => {
@@ -113,12 +109,13 @@ describe('<WeekGrid />', () => {
       .getByText('four-hour')
       .closest('[data-testid="session-block"]') as HTMLElement;
 
-    // 9 AM is one HOUR_PX below the 8 AM start of the visible window.
-    expect(oneHour.style.top).toBe('64px');
-    expect(fourHour.style.top).toBe('64px');
+    // 9 AM is one HOUR_PX (80px) below the 8 AM start of the
+    // visible window.
+    expect(oneHour.style.top).toBe('80px');
+    expect(fourHour.style.top).toBe('80px');
     // The 4-hour Session is 4× as tall as the 1-hour Session.
-    expect(oneHour.style.height).toBe('64px');
-    expect(fourHour.style.height).toBe('256px');
+    expect(oneHour.style.height).toBe('80px');
+    expect(fourHour.style.height).toBe('320px');
   });
 
   it('calls onSessionClick (not onCellClick) when a Session block is clicked', () => {
