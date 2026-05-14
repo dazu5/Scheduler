@@ -97,7 +97,7 @@ describe('<App />', () => {
     render(<App />);
     await waitFor(() => expect(listSessions).toHaveBeenCalled());
 
-    fireEvent.click(screen.getAllByRole('cell')[0]);
+    fireEvent.click(screen.getAllByLabelText(/^\d{4}-\d{2}-\d{2} 8 AM$/)[0]);
     expect(screen.getByRole('dialog', { name: /new session/i })).toBeInTheDocument();
   });
 
@@ -130,7 +130,7 @@ describe('<App />', () => {
     render(<App />);
     await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getAllByRole('cell')[0]);
+    fireEvent.click(screen.getAllByLabelText(/^\d{4}-\d{2}-\d{2} 8 AM$/)[0]);
     fireEvent.change(screen.getByLabelText(/label/i), {
       target: { value: 'Integration test session' },
     });
@@ -214,7 +214,7 @@ describe('<App />', () => {
     render(<App />);
     await waitFor(() => expect(listSessions).toHaveBeenCalled());
 
-    fireEvent.click(screen.getAllByRole('cell')[0]);
+    fireEvent.click(screen.getAllByLabelText(/^\d{4}-\d{2}-\d{2} 8 AM$/)[0]);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
@@ -225,7 +225,7 @@ describe('<App />', () => {
     render(<App />);
     await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getAllByRole('cell')[0]);
+    fireEvent.click(screen.getAllByLabelText(/^\d{4}-\d{2}-\d{2} 8 AM$/)[0]);
     fireEvent.change(screen.getByLabelText(/label/i), {
       target: { value: 'Toasted session' },
     });
@@ -327,7 +327,7 @@ describe('<App />', () => {
     render(<App />);
     await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getAllByRole('cell')[0]);
+    fireEvent.click(screen.getAllByLabelText(/^\d{4}-\d{2}-\d{2} 8 AM$/)[0]);
     fireEvent.change(screen.getByLabelText(/label/i), {
       target: { value: 'will fail' },
     });
@@ -412,7 +412,7 @@ describe('<App />', () => {
     await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
 
     // Open the editor modal — clicking any empty cell does it.
-    fireEvent.click(screen.getAllByRole('cell')[0]);
+    fireEvent.click(screen.getAllByLabelText(/^\d{4}-\d{2}-\d{2} 8 AM$/)[0]);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
@@ -424,7 +424,7 @@ describe('<App />', () => {
     render(<App />);
     await waitFor(() => expect(listSessions).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getAllByRole('cell')[0]);
+    fireEvent.click(screen.getAllByLabelText(/^\d{4}-\d{2}-\d{2} 8 AM$/)[0]);
     const labelInput = screen.getByLabelText(/label/i) as HTMLInputElement;
     labelInput.focus();
     fireEvent.keyDown(labelInput, { key: 'z', ctrlKey: true });

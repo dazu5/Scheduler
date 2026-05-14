@@ -55,12 +55,19 @@ describe('<WeekGrid />', () => {
     expect(rows[11].textContent?.trim()).toBe('7 PM');
   });
 
-  it('renders 84 body cells (7 days × 12 hours)', () => {
+  it('renders 84 hour-bucket buttons (7 days × 12 hours) for click-to-add', () => {
     render(<WeekGrid weekStart={new Date(2025, 0, 13)} />);
-    expect(screen.getAllByRole('cell')).toHaveLength(84);
+    // Each invisible hour bucket carries an aria-label of the form
+    // "{dateKey} {hour AM/PM}" — 7 × 12 = 84 of them.
+    const buckets = screen
+      .getAllByRole('button')
+      .filter((b) =>
+        /^\d{4}-\d{2}-\d{2} \d{1,2} (AM|PM)$/.test(b.getAttribute('aria-label') ?? ''),
+      );
+    expect(buckets).toHaveLength(84);
   });
 
-  it('labels each cell with its dateKey + hour for queries', () => {
+  it('labels each hour bucket with its dateKey + hour for queries', () => {
     render(<WeekGrid weekStart={new Date(2025, 0, 13)} />);
     expect(screen.getByLabelText('2025-01-13 8 AM')).toBeInTheDocument();
     expect(screen.getByLabelText('2025-01-15 1 PM')).toBeInTheDocument();
@@ -77,28 +84,41 @@ describe('<WeekGrid />', () => {
     expect(handler).toHaveBeenCalledWith('2025-01-15', 10);
   });
 
-  it('renders a Session block inside the cell matching its (dateKey, start hour)', () => {
+  it('renders a Session block inside the day column matching its dateKey', () => {
     const sessions = [
       mkSession({ dateKey: '2025-01-13', startMin: 540, label: 'Morning warm-up' }),
     ];
     render(<WeekGrid weekStart={new Date(2025, 0, 13)} sessions={sessions} />);
 
-    const cell = screen.getByLabelText('2025-01-13 9 AM');
-    expect(cell).toHaveTextContent('Morning warm-up');
+    const block = screen.getByText('Morning warm-up').closest('[data-testid="session-block"]');
+    const dayColumn = block?.parentElement;
+    expect(dayColumn).toHaveAttribute('data-day-column', '2025-01-13');
 
-    // No block elsewhere
-    expect(screen.getByLabelText('2025-01-13 8 AM')).not.toHaveTextContent('Morning warm-up');
+    // No block on a different day
+    const otherColumn = document.querySelector('[data-day-column="2025-01-14"]');
+    expect(otherColumn?.textContent ?? '').not.toContain('Morning warm-up');
   });
 
-  it('places each Session block in the cell of its start hour, by Math.floor(startMin / 60)', () => {
+  it('positions each Session block proportional to startMin + duration (top + height)', () => {
     const sessions = [
-      mkSession({ id: 'a', dateKey: '2025-01-13', startMin: 555, label: 'Quarter-past 9' }),
-      mkSession({ id: 'b', dateKey: '2025-01-14', startMin: 720, label: 'Noon-thirty' }),
+      mkSession({ id: 'a', dateKey: '2025-01-13', startMin: 540, endMin: 600, label: 'one-hour' }), // 9–10
+      mkSession({ id: 'b', dateKey: '2025-01-14', startMin: 540, endMin: 780, label: 'four-hour' }), // 9–1
     ];
     render(<WeekGrid weekStart={new Date(2025, 0, 13)} sessions={sessions} />);
 
-    expect(screen.getByLabelText('2025-01-13 9 AM')).toHaveTextContent('Quarter-past 9');
-    expect(screen.getByLabelText('2025-01-14 12 PM')).toHaveTextContent('Noon-thirty');
+    const oneHour = screen
+      .getByText('one-hour')
+      .closest('[data-testid="session-block"]') as HTMLElement;
+    const fourHour = screen
+      .getByText('four-hour')
+      .closest('[data-testid="session-block"]') as HTMLElement;
+
+    // 9 AM is one HOUR_PX below the 8 AM start of the visible window.
+    expect(oneHour.style.top).toBe('64px');
+    expect(fourHour.style.top).toBe('64px');
+    // The 4-hour Session is 4× as tall as the 1-hour Session.
+    expect(oneHour.style.height).toBe('64px');
+    expect(fourHour.style.height).toBe('256px');
   });
 
   it('calls onSessionClick (not onCellClick) when a Session block is clicked', () => {
